@@ -85,10 +85,11 @@ def install_error_handlers(app) -> None:
 
 
 class StrictJSONMiddleware:
-    def __init__(self, app, max_body_bytes: int = 262144, body_timeout: float = 5.0):
+    def __init__(self, app, max_body_bytes: int = 262144, body_timeout: float = 5.0, optional_empty_paths=frozenset()):
         self.app = app
         self.max_body_bytes = max_body_bytes
         self.body_timeout = body_timeout
+        self.optional_empty_paths = optional_empty_paths
 
     async def __call__(self, scope, receive, send):
         if scope['type'] != 'http':
@@ -96,7 +97,9 @@ class StrictJSONMiddleware:
             return
 
         # Match the router's root_path semantics when deployed under a URL prefix.
-        if scope.get('method') == 'POST' and get_route_path(scope).startswith('/api/'):
+        path = get_route_path(scope)
+        if scope.get('method') in {'POST', 'PATCH'} and path.startswith('/api/'):
+            optional_empty = path in self.optional_empty_paths
             headers = {}
             for name, value in scope.get('headers', []):
                 name = name.lower()
@@ -112,7 +115,7 @@ class StrictJSONMiddleware:
             parameters = [part.partition('=') for part in content_type[1:]]
             valid_charset = all(name.strip() != 'charset' or value.strip(' "') in ('utf-8', 'utf8')
                                 for name, _separator, value in parameters)
-            if not json_type or not valid_charset or headers.get(b'content-encoding', 'identity').lower() != 'identity':
+            if (not json_type and not (optional_empty and not media_type)) or not valid_charset or headers.get(b'content-encoding', 'identity').lower() != 'identity':
                 await error_response(415, 'UNSUPPORTED_MEDIA_TYPE', 'Используйте несжатый JSON в кодировке UTF-8.')(scope, receive, send)
                 return
 
@@ -162,8 +165,12 @@ class StrictJSONMiddleware:
             if expected_length is not None and expected_length != len(body):
                 await error_response(400, 'INVALID_HEADERS', 'Длина запроса не совпадает с заголовком.')(scope, receive, send)
                 return
+            if body and not json_type:
+                await error_response(415, 'UNSUPPORTED_MEDIA_TYPE', 'Используйте несжатый JSON в кодировке UTF-8.')(scope, receive, send)
+                return
             try:
-                _strict_json(body)
+                if body or not optional_empty:
+                    _strict_json(body)
             except (ValueError, UnicodeError, RecursionError, OverflowError):
                 await error_response(400, 'INVALID_JSON', 'Некорректный JSON. Проверьте формат запроса.')(scope, receive, send)
                 return

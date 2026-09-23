@@ -23,3 +23,9 @@ The original frontend commit `d5c4b17` is preserved at `backup/alim-before-integ
 Use `npm run check` at repository root for Python regressions, isolated live-server smoke, both frontend test suites, lint and production build. Tests must not send real mail or call paid AI providers.
 
 Visual browser QA is separate from build/DOM checks; it was not performed as part of the initial frontend implementation.
+
+Final integration validation on 2026-09-23: `npm run check` passed with 378 Python tests, 35 frontend unit/DOM tests, six frontend regression suites (including 59 shared scope cases), live loopback smoke, lint, TypeScript and production build. `pip check` and the requirements dry-run also passed. One upstream Starlette/httpx test-client deprecation warning remains.
+
+The shared scope vocabulary now recognizes the existing clinic/registration-desk examples while preserving injection and off-topic refusals. Account dependencies are pinned. Account forms remain at `/account`; they do not turn the frontend demo role switch or local task storage into server-authorized accounts.
+
+No real mail or paid AI provider calls were made during validation. Browser visual QA and live-provider testing were not performed during this integration.

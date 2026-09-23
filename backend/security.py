@@ -84,15 +84,22 @@ def _request_host(values: list[bytes]) -> str | None:
 
 
 class SecurityMiddleware:
-    def __init__(self, app: ASGIApp, settings: Settings, limiter: RateLimiter):
+    def __init__(self, app: ASGIApp, settings: Settings, limiter: RateLimiter, bearer_exempt_routes=()):
         self.app = app
         self.settings = settings
         self.limiter = limiter
+        # Compiled full paths and explicit methods from registered account/mail
+        # routes. Their session/action-token/admin checks replace only bearer auth.
+        self.bearer_exempt_routes = bearer_exempt_routes
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        path = get_route_path(scope)
+        account_path = any(pattern.fullmatch(path) for pattern, _methods in self.bearer_exempt_routes)
+        account_method = any(pattern.fullmatch(path) and scope["method"] in methods
+                             for pattern, methods in self.bearer_exempt_routes)
 
         async def safe_send(message):
             if message["type"] == "http.response.start":
@@ -110,6 +117,8 @@ class SecurityMiddleware:
             if len(request_origins) == 1 and request_origins[0] in self.settings.allowed_origins:
                 error_headers["Access-Control-Allow-Origin"] = request_origins[0]
                 error_headers["Vary"] = "Origin"
+                if account_path:
+                    error_headers["Access-Control-Allow-Credentials"] = "true"
             response = JSONResponse({"detail": {"code": code, "message": message}}, status_code=status, headers=error_headers)
             await response(scope, receive, safe_send)
 
@@ -131,14 +140,13 @@ class SecurityMiddleware:
             return
 
         # Use the router's own root_path handling, including mounted/gateway URLs.
-        path = get_route_path(scope)
         is_api = path == "/api" or path.startswith("/api/")
         is_docs = self.settings.environment != "production" and path.rstrip("/") in {
             "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect",
         }
         preflight = (scope["method"] == "OPTIONS" and bool(origins)
                      and any(key.lower() == b"access-control-request-method" for key, _ in headers))
-        if self.settings.api_access_token and (is_api or is_docs) and not preflight:
+        if self.settings.api_access_token and ((is_api and not account_method) or is_docs) and not preflight:
             authorizations = [value for key, value in headers if key.lower() == b"authorization"]
             parts = authorizations[0].split(b" ") if len(authorizations) == 1 else []
             valid = (len(parts) == 2 and parts[0].lower() == b"bearer"
@@ -147,7 +155,7 @@ class SecurityMiddleware:
                 await reject(401, "UNAUTHORIZED", "A valid bearer token is required.", {"WWW-Authenticate": "Bearer"})
                 return
 
-        if is_api and scope["method"] == "POST":
+        if is_api and scope["method"] in {"POST", "PATCH"}:
             retry_after = self.limiter.check(client)
             if retry_after:
                 await reject(429, "RATE_LIMITED", "Request budget exceeded. Try again later.", {"Retry-After": str(retry_after)})

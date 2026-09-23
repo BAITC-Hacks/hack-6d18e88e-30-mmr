@@ -6,6 +6,7 @@ import socket
 import subprocess
 import sys
 import time
+from tempfile import TemporaryDirectory
 
 import httpx
 
@@ -16,10 +17,18 @@ def main():
         listener.bind(('127.0.0.1', 0))
         port = listener.getsockname()[1]
     token = secrets.token_hex(32)
+    account_directory = TemporaryDirectory(prefix='ai-sana-smoke-')
     env = {**os.environ, 'PYTHON_DOTENV_DISABLED': '1', 'OPENAI_API_KEY': '', 'NVIDIA_API_KEY': '',
            'AI_MODEL': '', 'APP_ENV': 'development', 'API_ACCESS_TOKEN': token,
            'API_ALLOWED_HOSTS': '127.0.0.1', 'API_ALLOWED_ORIGINS': 'http://localhost:5173',
-           'API_RATE_LIMIT_PER_CLIENT': '60', 'API_RATE_LIMIT_GLOBAL': '300', 'API_RATE_LIMIT_WINDOW_SECONDS': '60'}
+           'API_RATE_LIMIT_PER_CLIENT': '60', 'API_RATE_LIMIT_GLOBAL': '300', 'API_RATE_LIMIT_WINDOW_SECONDS': '60',
+           'DATABASE_PATH': str(Path(account_directory.name) / 'accounts.sqlite3'),
+           'MAIL_DIRECTORY': str(Path(account_directory.name) / 'mail'),
+           'MAIL_BACKEND': 'file', 'MAIL_WORKER_ENABLED': 'false',
+           'MAIL_FROM': 'AI Sana <noreply@example.test>',
+           'SMTP_HOST': '', 'SMTP_USER': '', 'SMTP_PASSWORD': '', 'SMTP_PORT': '587',
+           'AUTH_PAGE_URL': f'http://127.0.0.1:{port}/account', 'COOKIE_SECURE': 'false',
+           'SESSION_HOURS': '24', 'CORS_ORIGINS': 'http://localhost:5173'}
     process = subprocess.Popen(
         [sys.executable, '-m', 'uvicorn', 'main:app', '--app-dir', 'backend', '--host', '127.0.0.1',
          '--port', str(port), '--no-proxy-headers', '--no-access-log'],
@@ -62,6 +71,7 @@ def main():
             process.wait(timeout=5)
         if process.stderr:
             process.stderr.close()
+        account_directory.cleanup()
 
 
 if __name__ == '__main__':

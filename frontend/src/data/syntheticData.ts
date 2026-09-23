@@ -1,6 +1,7 @@
 import type { Task } from '../types/task';
 import type { Team } from '../types/team';
 import type { Proposal } from '../types/proposal';
+import type { TaskDraftSeed } from '../types/ai';
 import { calculateRating, getReadinessLevel } from '../services/ratingService.ts';
 
 export function createEmptyTask(draft = '', industry = 'Retail'): Task {
@@ -151,6 +152,12 @@ export const seedTeams: Team[] = [
     interests: ['Education', 'Analytics', 'AI', 'UX/UI'], industries: ['Education'], progressPoints: 0,
   },
 ];
+
+// Core AI scope checks and draft pickers share the same five UI examples.
+export const seedDrafts: TaskDraftSeed[] = seedTasks.filter(task => !task.published).map(task => ({
+  id: task.id, title: task.title, industry: task.industry, text: task.rawDraft || task.context,
+  completeness: 'weak', estimatedInitialScore: task.rating,
+}));
 
 export const seedProposals: Proposal[] = [
   {

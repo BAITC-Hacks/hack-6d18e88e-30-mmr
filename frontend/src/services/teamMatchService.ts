@@ -9,9 +9,12 @@ export interface TeamMatchResult {
   industry: number;
   matching: string[];
   missing: string[];
+  matchedTags: string[];
 }
 
-const normalize = (value: string) => value.trim().toLowerCase().replace(/ё/gu, 'е').replace(/[\s._-]+/gu, '');
+const normalize = (value: string) => value.normalize('NFKC').trim().toLowerCase().replace(/ё/gu, 'е').replace(/[\s._-]+/gu, '');
+const phrase = (value: string) => value.normalize('NFKC').toLowerCase().replace(/(?<=\p{L})\.(?=\p{L})/gu, '').replace(/[^\p{L}\p{N}+#]+/gu, ' ').trim();
+const containsLabel = (text: string, label: string) => Boolean(label) && ` ${text} `.includes(` ${label} `);
 const aliases: Record<string, string> = {
   ml: 'ai', machinelearning: 'ai', ии: 'ai', машинноеобучение: 'ai',
   dataanalysis: 'analytics', аналитика: 'analytics', анализданных: 'analytics',
@@ -22,17 +25,24 @@ const aliases: Record<string, string> = {
   optimization: 'optimization', оптимизация: 'optimization',
 };
 const canonical = (value: string) => aliases[normalize(value)] ?? normalize(value);
-const technologies = new Set(['python', 'react', 'typescript', 'javascript', 'fastapi', 'django', 'nodejs', 'sql', 'postgresql', 'docker', 'powerbi', 'pandas', 'pytorch', 'tensorflow', 'flutter', 'figma', 'excel', 'nextjs']);
+const technologies = new Set(['python', 'react', 'typescript', 'javascript', 'fastapi', 'django', 'nodejs', 'sql', 'postgresql', 'docker', 'powerbi', 'pandas', 'pytorch', 'tensorflow', 'flutter', 'figma', 'excel', 'nextjs', 'c', 'c++', 'c#', 'go', 'rust', 'java', 'kotlin', 'swift', 'sqlite', 'redis', 'kubernetes', 'tailwind', 'express', 'aiogram']);
 const skillPatterns: { name: string; pattern: RegExp }[] = [
   { name: 'AI', pattern: /\bai\b|\bml\b|машинн|нейросет|искусственн/iu },
   { name: 'Analytics', pattern: /analytic|аналити|анализ данных/iu },
   { name: 'Forecasting', pattern: /forecast|прогноз/iu },
   { name: 'NLP', pattern: /\bnlp\b|классификаци[яи] документ|обработк[аи] текст/iu },
   { name: 'Optimization', pattern: /optimi|оптимизац/iu },
-  { name: 'UX/UI', pattern: /ux|интерфейс|дизайн/iu },
+  { name: 'UX/UI', pattern: /\bux\b|интерфейс|дизайн/iu },
   { name: 'Web', pattern: /\bweb\b|веб|портал/iu },
 ];
-const unique = (items: string[]) => [...new Map(items.map(item => [canonical(item), item])).values()];
+const unique = (items: string[]) => {
+  const labels = new Map<string, string>();
+  for (const item of items) {
+    const key = canonical(item);
+    if (key && !labels.has(key)) labels.set(key, item.trim());
+  }
+  return [...labels.values()];
+};
 const overlap = (required: string[], available: string[]) => {
   const supported = new Set(available.map(canonical));
   return required.length ? Math.round(required.filter(item => supported.has(canonical(item))).length / required.length * 100) : 0;
@@ -48,14 +58,25 @@ export function calculateTeamMatch(task: Task, team: Team): TeamMatchResult {
   const requiredInterests = unique([...requiredSkills, task.industry].filter(Boolean));
   const technologyScore = overlap(requiredTechnologies, team.technologies);
   const skills = overlap(requiredSkills, team.skills);
-  const interests = overlap(requiredInterests, team.interests);
-  const industry = team.industries.some(item => canonical(item) === canonical(task.industry)) ? 100 : 0;
+  const teamInterests = unique(team.interests);
+  const taskText = phrase(`${text} ${task.industry}`);
+  const relevantInterests = teamInterests.filter(interest => requiredInterests.some(item => canonical(item) === canonical(interest)) || containsLabel(taskText, phrase(interest)));
+  const interests = teamInterests.length ? Math.min(100, Math.round(relevantInterests.length / Math.min(3, teamInterests.length) * 100)) : 0;
+  const industry = canonical(task.industry) && team.industries.some(item => canonical(item) === canonical(task.industry)) ? 100 : 0;
   const allCapabilities = new Set([...team.technologies, ...team.skills, ...team.interests, ...team.industries].map(canonical));
   const requirements = unique([...requiredTechnologies, ...requiredSkills, task.industry].filter(Boolean));
+  const matching = unique([...requirements.filter(item => allCapabilities.has(canonical(item))), ...relevantInterests]);
   return {
     total: Math.round(technologyScore * 0.35 + skills * 0.3 + interests * 0.2 + industry * 0.15),
     technologies: technologyScore, skills, interests, industry,
-    matching: requirements.filter(item => allCapabilities.has(canonical(item))),
+    matching,
+    matchedTags: matching,
     missing: requirements.filter(item => !allCapabilities.has(canonical(item))),
   };
+}
+
+/** Ranking never removes a published task because of low readiness or relevance. */
+export function getRecommendedTasksForTeam(team: Team, tasks: Task[]): { task: Task; match: TeamMatchResult }[] {
+  return tasks.filter(task => task.published).map(task => ({ task, match: calculateTeamMatch(task, team) }))
+    .sort((a, b) => b.match.total - a.match.total || b.task.rating - a.task.rating || a.task.id.localeCompare(b.task.id));
 }

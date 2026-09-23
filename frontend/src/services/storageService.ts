@@ -27,8 +27,8 @@ export interface PersistedAppState {
 
 const date = z.string().refine(value => Number.isFinite(Date.parse(value)));
 const text = z.string();
-const id = z.string().min(1);
-const taskSchema = z.object({
+const id = z.string().refine(value => value.trim().length > 0);
+export const taskSchema = z.object({
   id, rawDraft: text.optional(), fieldSources: z.record(text, z.enum(['draft', 'clarification', 'manual'])).optional(),
   title: text, industry: text, tags: z.array(text), context: text, need: text, targetUsers: text,
   availableData: text, constraints: text, expectedResult: text, successCriteria: text,
@@ -36,15 +36,16 @@ const taskSchema = z.object({
   rating: z.number().min(0).max(100), readinessLevel: z.enum(['draft', 'working', 'ready', 'priority']),
   confirmed: z.boolean(), published: z.boolean(), createdAt: date, updatedAt: date,
 });
-const teamSchema = z.object({
+export const teamSchema = z.object({
   id, name: text, description: text, skills: z.array(text), technologies: z.array(text),
   interests: z.array(text), industries: z.array(text), progressPoints: z.number().int().nonnegative(),
 });
-const proposalSchema = z.object({
+export const proposalStatusSchema = z.enum(['pending', 'selected', 'rejected']);
+export const proposalSchema = z.object({
   id, taskId: id, teamId: id, idea: text, implementationPlan: text, estimatedTime: text,
-  prototypeUrl: text, status: z.enum(['pending', 'selected', 'rejected']), createdAt: date,
+  prototypeUrl: text, status: proposalStatusSchema, createdAt: date,
 });
-const milestoneSchema = z.object({
+export const milestoneSchema = z.object({
   id, taskId: id, teamId: id, title: text, description: text,
   status: z.enum(['pending', 'completed']), points: z.number().int().nonnegative(), confirmedAt: date.optional(),
 });

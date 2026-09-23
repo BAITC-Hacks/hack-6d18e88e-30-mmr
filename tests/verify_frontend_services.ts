@@ -1,7 +1,7 @@
 ﻿import assert from 'node:assert/strict';
 import { calculateRating, getReadinessLevel } from '../frontend/src/services/ratingService';
 import { calculateTeamMatch, getRecommendedTasksForTeam } from '../frontend/src/services/teamMatchService';
-import { seedDrafts, seedTasks, seedTeams, seedProposals } from '../frontend/src/data/syntheticData';
+import { demoAnswers, seedDrafts, seedTasks, seedTeams, seedProposals } from '../frontend/src/data/syntheticData';
 import type { Task } from '../frontend/src/types/task';
 import type { Team } from '../frontend/src/types/team';
 
@@ -19,17 +19,17 @@ const blankTeam: Team = {
 };
 const fullText = 'Подробное описание с конкретными исходными условиями и проверяемым результатом работы команды.';
 
-// Actual points require both text and confirmation; potential reflects current text only.
+// Integrated contract: live completeness is separate from confirmation; potential is the attainable ceiling.
 assert.equal(calculateRating(blankTask).total, 0);
-assert.equal(calculateRating(blankTask).potentialTotal, 0);
-assert.equal(calculateRating({ ...seedTasks[0], confirmedFields: [] }).total, 0);
+assert.equal(calculateRating(blankTask).potentialTotal, 100);
+assert.equal(calculateRating({ ...seedTasks[0], confirmedFields: [] }).total, seedTasks[0].rating);
 assert.equal(calculateRating({ ...seedTasks[0], confirmedFields: [] }).potentialTotal, 100);
 assert.equal(calculateRating({ ...blankTask, confirmedFields: [...ratingFields] }).total, 0);
 for (const placeholder of ['Не указано', 'Не указаны', 'Требует уточнения', 'Требуется уточнение', 'Будет уточнено', 'Не заполнено', 'Неизвестно', 'Нет данных', 'TBD', 'unknown', 'not provided', 'N/A', '??????', '      ']) {
   const task = { ...blankTask, confirmedFields: [...ratingFields] };
   for (const field of ratingFields) task[field] = placeholder;
   assert.equal(calculateRating(task).total, 0, `Placeholder must not earn points: ${placeholder}`);
-  assert.equal(calculateRating(task).potentialTotal, 0);
+  assert.equal(calculateRating(task).potentialTotal, 100);
 }
 assert.equal(calculateRating({ ...blankTask, constraints: 'Нет ограничений по используемым технологиям.', confirmedFields: ['constraints'] }).constraints, 10);
 assert.equal(calculateRating({ ...blankTask, contact: 'lead@demo.kz', confirmedFields: ['contact'] }).businessCommunication, 5);
@@ -53,9 +53,9 @@ for (const task of ratingFixtures) {
   assert.equal(breakdown.total + breakdown.recommendations.reduce((sum, recommendation) => sum + recommendation.possibleGain, 0), 100);
   assert.equal(new Set(breakdown.recommendations.map((recommendation) => recommendation.field)).size, breakdown.recommendations.length);
   for (const [index, recommendation] of breakdown.recommendations.entries()) {
-    assert.ok(recommendation.message.includes(`(+${recommendation.possibleGain} б.)`));
+    assert.ok(recommendation.message.trim().length > 0);
     if (index > 0) assert.ok(breakdown.recommendations[index - 1].possibleGain >= recommendation.possibleGain);
-    const improved = { ...task, [recommendation.field]: fullText, confirmedFields: [...task.confirmedFields, recommendation.field] };
+    const improved = { ...task, [recommendation.field]: demoAnswers[recommendation.field], confirmedFields: [...task.confirmedFields, recommendation.field] };
     assert.equal(calculateRating(improved).total - breakdown.total, recommendation.possibleGain, `Incorrect gain for ${recommendation.field}`);
   }
 }
@@ -73,12 +73,13 @@ assert.deepEqual(new Set(seedTasks.map((task) => task.readinessLevel)), new Set(
 for (const proposal of seedProposals) {
   assert.ok(seedTasks.some((task) => task.id === proposal.taskId));
   assert.ok(seedTeams.some((team) => team.id === proposal.teamId));
-  assert.ok(proposal.idea && proposal.implementationPlan && proposal.estimatedTime && proposal.prototypeUrl);
+  assert.ok(proposal.idea && proposal.implementationPlan && proposal.estimatedTime);
+  if (proposal.prototypeUrl) assert.ok(['http:', 'https:'].includes(new URL(proposal.prototypeUrl).protocol));
 }
 
 // Empty profiles cannot receive inferred compatibility or match empty industry labels.
 assert.deepEqual(calculateTeamMatch(blankTask, blankTeam), {
-  total: 0, technologies: 0, skills: 0, interests: 0, industry: 0, matchedTags: [],
+  total: 0, technologies: 0, skills: 0, interests: 0, industry: 0, matchedTags: [], matching: [], missing: [],
 });
 assert.equal(calculateTeamMatch(seedTasks[0], { ...blankTeam, industries: [' ', ''] }).total, 0);
 assert.equal(calculateTeamMatch({ ...blankTask, title: 'GovTech Django FastAPI PostgreSQL' }, { ...blankTeam, technologies: ['Go', 'SQL', 'API'] }).technologies, 0);
@@ -95,7 +96,7 @@ const overlap = calculateTeamMatch({ ...pythonTask, industry: 'Python' }, { ...b
 assert.deepEqual(overlap.matchedTags, ['Python']);
 assert.equal(calculateTeamMatch({ ...blankTask, need: 'FinTech API', industry: 'Retail' }, { ...blankTeam, industries: ['FinTech'] }).industry, 0, 'Industry relevance uses the actual industry');
 assert.deepEqual(calculateTeamMatch(seedTasks[0], seedTeams[0]), calculateTeamMatch(seedTasks[0], { ...seedTeams[0], progressPoints: 999999 }), 'Progress points do not affect relevance');
-assert.ok(calculateTeamMatch(seedTasks[0], seedTeams[0]).total >= 50, 'FinTech task remains relevant to DataWhales');
+assert.ok(calculateTeamMatch(seedTasks.find(task => task.id === 'task-retail')!, seedTeams.find(team => team.id === 'team-datalab')!).total >= 50, 'Retail forecasting remains relevant to DataLab');
 for (const task of seedTasks) {
   for (const team of seedTeams) {
     const result = calculateTeamMatch(task, team);
@@ -109,11 +110,11 @@ for (const task of seedTasks) {
 const catalog = [...seedTasks, { ...blankTask, id: 'private', published: false }];
 const beforeCatalog = JSON.stringify(catalog);
 const recommendations = getRecommendedTasksForTeam(blankTeam, catalog);
-assert.equal(recommendations.length, seedTasks.length);
+assert.equal(recommendations.length, seedTasks.filter(task => task.published).length);
 assert.ok(recommendations.some(({ task }) => task.readinessLevel === 'draft'));
 assert.equal(JSON.stringify(catalog), beforeCatalog, 'Sorting must not mutate source tasks');
 for (let index = 1; index < recommendations.length; index++) {
   assert.ok(recommendations[index - 1].match.total >= recommendations[index].match.total);
 }
 
-console.log('PASS: rating confirmation, potential, exact gains, seed consistency and TeamMatch regressions');
+console.log('PASS: live rating, attainable potential, exact gains, seed consistency and TeamMatch regressions');

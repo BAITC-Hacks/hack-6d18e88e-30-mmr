@@ -3,6 +3,7 @@ env
 .env.local
 skills/
 node_modules/
+.pnpm-store/
 dist/
 .venv/
 venv/
@@ -13,3 +14,8 @@ __pycache__/
 .vscode/
 coverage/
 .pytest_cache/
+backend/data/
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.eml

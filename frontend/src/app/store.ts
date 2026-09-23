@@ -4,9 +4,10 @@ import type { Task } from '../types/task.ts';
 import type { Proposal } from '../types/proposal.ts';
 import { seedTasks, seedTeams, seedProposals } from '../data/syntheticData.ts';
 import { calculateRating, getReadinessLevel } from '../services/ratingService.ts';
-import { clearStorageError, getStorageError, isSafePrototypeUrl, safeLocalStorage, STORAGE_KEY, STORAGE_VERSION } from '../services/storageService.ts';
+import { clearStorageError, getStorageError, isSafePrototypeUrl, proposalSchema, taskSchema, safeLocalStorage, STORAGE_KEY, STORAGE_VERSION } from '../services/storageService.ts';
 import type { ActivityEvent, AppPage, PersistedAppState } from '../services/storageService.ts';
-import { MILESTONE_TEMPLATES, TASK_FIELDS } from './constants.ts';
+import { TASK_FIELDS } from './constants.ts';
+import { ensureStarterMilestones } from './persistence.ts';
 
 export type { AppPage, ActivityEvent };
 export type Page = AppPage;
@@ -63,6 +64,7 @@ export const useAppStore = create<AppState>()(persist((set, get) => {
       if (allowed.includes(page)) commit({ page });
     },
     setActiveRole(activeRole) {
+      if (activeRole !== 'business' && activeRole !== 'student') return;
       commit({ activeRole, page: activeRole === 'business' ? 'overview' : 'catalog', activeTaskId: null });
     },
     setActiveTeam(activeTeamId) {
@@ -73,6 +75,9 @@ export const useAppStore = create<AppState>()(persist((set, get) => {
     },
     addTask(task) {
       if (!business()) { deny('Создавать задачи может только бизнес.'); return; }
+      const parsed = taskSchema.safeParse(task);
+      if (!parsed.success) { deny('Карточка содержит некорректные данные.'); return; }
+      task = parsed.data;
       const state = get();
       if (state.tasks.some(item => item.id === task.id)) { deny('Такая задача уже существует.'); return; }
       const fresh = normalizedTask({ ...task, confirmed: false, published: false, confirmedFields: [] });
@@ -80,6 +85,9 @@ export const useAppStore = create<AppState>()(persist((set, get) => {
     },
     updateTask(task) {
       if (!business()) { deny('Редактировать задачи может только бизнес.'); return; }
+      const parsed = taskSchema.safeParse(task);
+      if (!parsed.success) { deny('Карточка содержит некорректные данные.'); return; }
+      task = parsed.data;
       const state = get();
       const previous = state.tasks.find(item => item.id === task.id);
       if (!previous) return;
@@ -120,6 +128,9 @@ export const useAppStore = create<AppState>()(persist((set, get) => {
     addProposal(proposal) {
       const state = get();
       if (state.activeRole !== 'student') return deny('Переключитесь в роль студента, чтобы отправить отклик.');
+      const parsed = proposalSchema.safeParse(proposal);
+      if (!parsed.success) return deny('Предложение содержит некорректные данные.');
+      proposal = parsed.data;
       if (!state.activeTeamId || proposal.teamId !== state.activeTeamId || !state.teams.some(team => team.id === proposal.teamId)) return deny('Выберите активную команду.');
       const task = state.tasks.find(item => item.id === proposal.taskId);
       if (!task?.published) return deny('Отклик доступен только для опубликованной задачи.');
@@ -137,13 +148,11 @@ export const useAppStore = create<AppState>()(persist((set, get) => {
       const proposal = state.proposals.find(item => item.id === id);
       if (!proposal || proposal.status === 'rejected') return false;
       if (proposal.status === 'selected') return true;
-      const existing = state.milestones.filter(item => item.taskId === proposal.taskId && item.teamId === proposal.teamId);
-      const milestones = MILESTONE_TEMPLATES.filter(template => !existing.some(item => item.title === template.title)).map(template => ({
-        ...template, id: crypto.randomUUID(), taskId: proposal.taskId, teamId: proposal.teamId, status: 'pending' as const,
-      }));
+      const proposals = state.proposals.map(item => item.id === id ? { ...item, status: 'selected' as const } : item);
+      const milestones = ensureStarterMilestones(proposals, state.milestones);
       const team = state.teams.find(item => item.id === proposal.teamId);
-      commit({ proposals: state.proposals.map(item => item.id === id ? { ...item, status: 'selected' } : item),
-        milestones: [...state.milestones, ...milestones], toast: `Команда ${team?.name} выбрана. Остальные отклики доступны.`,
+      commit({ proposals,
+        milestones, toast: `Команда ${team?.name} выбрана. Остальные отклики доступны.`,
         events: withEvent(state, 'Бизнес выбрал команду', `${team?.name} · ${state.tasks.find(task => task.id === proposal.taskId)?.title}`) });
       return true;
     },

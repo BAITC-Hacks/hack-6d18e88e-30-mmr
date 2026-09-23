@@ -1,8 +1,12 @@
 import type { ReadinessLevel, Task } from '../types/task';
 import type { RatingBreakdown, RatingRecommendation } from '../types/rating';
 
-const emptyAnswer = /^(?:нет|не знаю|позже|уточняется|не указано|tbd|n\/a|test|тест|[-—.?]+)$/iu;
-const meaningful = (value: string) => value.trim().length > 0 && !emptyAnswer.test(value.trim());
+const emptyAnswer = /^(?:нет|не знаю|позже|уточняется|test|тест)$/iu;
+const placeholder = /^(?:не указан[оыа]?|не определен[оыа]?|не заполнен[оыа]?|неизвестно|нет данных|требует уточнения|требуют уточнения|требуется уточнение|нужно уточнить|уточнить|будет уточнено|пока неизвестно|unknown|not specified|not provided|to be determined|tbd|todo|n a)(?:\s|$)/u;
+const meaningful = (value: string) => {
+  const marker = value.normalize('NFKC').toLowerCase().replace(/ё/gu, 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  return Boolean(marker) && !emptyAnswer.test(marker) && !placeholder.test(marker);
+};
 
 // A local, deterministic readiness rubric. It evaluates completeness, not truth.
 function descriptionScore(value: string, max: number): number {
@@ -38,8 +42,8 @@ export function calculateRating(task: Task): RatingBreakdown {
   const successCriteria = descriptionScore(task.successCriteria, 5)
     + (meaningful(task.successCriteria) && measurable.test(task.successCriteria) ? 5 : 0)
     + (meaningful(task.successCriteria) && metric.test(task.successCriteria) ? 5 : 0);
-  const constraints = descriptionScore(task.constraints, 5)
-    + (meaningful(task.constraints) && practicalConstraint.test(task.constraints) ? 5 : 0);
+  const constraints = /^(?:нет ограничений|ограничений нет|no constraints)/iu.test(task.constraints.trim()) ? 10
+    : descriptionScore(task.constraints, 5) + (meaningful(task.constraints) && practicalConstraint.test(task.constraints) ? 5 : 0);
   const users = descriptionScore(task.targetUsers, 10);
   const contact = meaningful(task.contact)
     ? (/[^\s@]+@[^\s@]+\.[^\s@]+|\+?\d[\d\s()-]{7,}/u.test(task.contact) || task.contact.trim().length >= 12 ? 5 : 2) : 0;

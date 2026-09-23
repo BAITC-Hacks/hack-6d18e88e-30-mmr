@@ -3,6 +3,7 @@
 from pathlib import Path
 import os
 import sys
+from tempfile import TemporaryDirectory
 
 import pytest
 
@@ -19,6 +20,25 @@ os.environ['API_ACCESS_TOKEN'] = ''
 for setting in ('API_ALLOWED_HOSTS', 'API_ALLOWED_ORIGINS', 'API_RATE_LIMIT_PER_CLIENT',
                 'API_RATE_LIMIT_GLOBAL', 'API_RATE_LIMIT_WINDOW_SECONDS'):
     os.environ.pop(setting, None)
+
+# Every app lifespan now initializes account storage. Never open the developer's
+# database or let inherited SMTP settings start an external delivery worker.
+_account_test_directory = TemporaryDirectory(prefix='ai-sana-tests-')
+os.environ['DATABASE_PATH'] = str(Path(_account_test_directory.name) / 'accounts.sqlite3')
+os.environ['MAIL_DIRECTORY'] = str(Path(_account_test_directory.name) / 'mail')
+os.environ['MAIL_BACKEND'] = 'file'
+os.environ['MAIL_WORKER_ENABLED'] = 'false'
+os.environ['MAIL_FROM'] = 'AI Sana <noreply@example.test>'
+os.environ['AUTH_PAGE_URL'] = 'http://localhost:8000/account'
+os.environ['COOKIE_SECURE'] = 'false'
+os.environ['SESSION_HOURS'] = '24'
+os.environ['SMTP_PORT'] = '587'
+for setting in ('SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 'CORS_ORIGINS'):
+    os.environ.pop(setting, None)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    _account_test_directory.cleanup()
 
 
 @pytest.fixture(autouse=True)
