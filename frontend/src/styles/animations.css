@@ -1,0 +1,7 @@
+@media (prefers-reduced-motion: no-preference) {
+  .button,.icon-button { transition: background-color 100ms ease-out, border-color 100ms ease-out; }
+  .progress-fill { transition: width 180ms ease-out; }
+  .score-ring circle { transition: stroke-dashoffset 180ms ease-out; }
+  .modal[open] { animation: modal-enter 170ms ease-out; }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+}

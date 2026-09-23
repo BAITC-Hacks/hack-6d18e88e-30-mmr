@@ -1,0 +1,14 @@
+import { useState } from 'react';
+import { useAiInspectorStore } from '../../services/aiClient';
+import { Badge } from '../../components/Badge';
+import { Button } from '../../components/Button';
+import { EmptyState } from '../../components/EmptyState';
+import { useAppStore } from '../../app/store';
+const tabs = ['Prompt','Input','Output Schema','Latest Response','Validation'] as const;
+export function PromptInspector() {
+  const latest = useAiInspectorStore(s=>s.latest);
+  const [tab,setTab] = useState<(typeof tabs)[number]>('Prompt');
+  const navigate = useAppStore(s=>s.navigate);
+  const content = latest ? {Prompt:latest.prompt,Input:latest.input,'Output Schema':latest.outputSchema,'Latest Response':{received:latest.response,used:latest.normalizedResponse},Validation:latest.validation}[tab] : null;
+  return <div className="stack"><div className="page-heading"><p className="eyebrow">AI TRANSPARENCY</p><h1>Понятно, как работает AI</h1><p>Последний запрос, фактический ответ и результат проверки. Локальный режим всегда обозначен явно.</p></div>{!latest ? <EmptyState title="Пока нет запросов" description="Проанализируйте черновик в конструкторе. Здесь появятся входные данные и результат проверки ответа." action={<Button onClick={()=>navigate('builder')}>Открыть конструктор</Button>}/> : <><div className="metrics"><div className="metric"><span className="muted">Источник ответа</span><h3 style={{marginTop:12}}>{latest.provider}</h3><Badge variant={latest.fallbackUsed?'warning':'success'}>{latest.fallbackUsed?'Локальный fallback':'Ответ сервера'}</Badge></div><div className="metric"><span className="muted">Проверка ответа сервера</span><p style={{marginTop:12}}>JSON: {latest.validation.jsonValid?'корректен':'не получен / некорректен'}</p><p>Schema: {latest.validation.schemaValid?'пройдена':'не пройдена'}</p></div><div className="metric"><span className="muted">Длительность запроса</span><strong>{Math.round(latest.durationMs)} <small style={{fontSize:14}}>мс</small></strong></div></div>{latest.reason && <div className="notice notice-warning">{latest.reason}</div>}<section className="panel"><div className="inspector-tabs" role="tablist" aria-label="Данные AI-запроса">{tabs.map(name=><Button key={name} role="tab" aria-selected={name===tab} aria-controls="inspector-panel" id={`inspector-${name.replaceAll(' ','-')}`} variant={name===tab?'primary':'ghost'} onClick={()=>setTab(name)}>{name}</Button>)}</div><pre className="inspector-code" id="inspector-panel" role="tabpanel" aria-labelledby={`inspector-${tab.replaceAll(' ','-')}`}>{typeof content==='string'?content:JSON.stringify(content,null,2)}</pre><p className="muted">При недоступном сервере используются вопросы для ручного уточнения. Неизвестные бизнес-факты остаются незаполненными.</p></section></>}</div>;
+}
