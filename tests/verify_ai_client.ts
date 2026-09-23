@@ -96,7 +96,8 @@ try {
   globalThis.clearTimeout = ((id: ReturnType<typeof setTimeout>) => { cleared++; originalClearTimeout(id); }) as typeof clearTimeout;
   globalThis.fetch = async (_url, init) => ({
     ok: true,
-    json: () => new Promise((_resolve, reject) => {
+    status: 200,
+    text: () => new Promise((_resolve, reject) => {
       init!.signal!.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
     }),
   }) as Response;

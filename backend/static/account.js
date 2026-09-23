@@ -20,7 +20,7 @@ function show(name) {
 async function api(path, body, method = 'POST') {
   let response;
   try {
-    response = await fetch(`/api/${path}`, {
+    response = await fetch(`api/${path}`, {
       method, credentials: 'include', headers: { 'Content-Type': 'application/json' },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });

@@ -1,6 +1,6 @@
 :where(.app-shell) * { box-sizing: border-box; }
 .app-shell { margin: 0; min-width: 320px; font-size: 14px; line-height: 1.55; }
-:where(.app-shell) button, :where(.app-shell) input, :where(.app-shell) select, :where(.app-shell) textarea { font: inherit; }
+:where(.app-shell) :where(button, input, select, textarea) { font: inherit; }
 :where(.app-shell) button { cursor: pointer; }
 :where(.app-shell) button:disabled { cursor: not-allowed; opacity: .55; }
 :where(.app-shell) a { color: var(--accent); text-underline-offset: 3px; }
@@ -37,7 +37,7 @@
 :where(.app-shell) .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 :where(.app-shell) .field { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 600; }
 :where(.app-shell) .field label { display: flex; justify-content: space-between; gap: 10px; }
-:where(.app-shell) input:not([type=checkbox]):not([type=radio]), :where(.app-shell) select, :where(.app-shell) textarea { color: var(--text); background: #fff; border: 1px solid #cdd6cc; border-radius: 8px; padding: 11px 12px; min-width: 0; width: 100%; font-size: 14px; font-weight: 400; }
+:where(.app-shell) :where(input:not([type=checkbox]):not([type=radio]),select,textarea) { color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 11px 12px; min-width: 0; width: 100%; font-size: 14px; font-weight: 400; }
 :where(.app-shell) input::placeholder, :where(.app-shell) textarea::placeholder { color: #7d877f; }
 :where(.app-shell) textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 :where(.app-shell) input[type=checkbox] { accent-color: var(--accent); width: 17px; height: 17px; }

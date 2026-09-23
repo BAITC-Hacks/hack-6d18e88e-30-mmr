@@ -341,7 +341,7 @@ def test_frontend_cors_and_https_cookie(client):
     assert preflight.status_code == 200
     assert preflight.headers["access-control-allow-origin"] == "http://localhost:5173"
     assert preflight.headers["access-control-allow-credentials"] == "true"
-    settings = replace(client.app.state.settings, cookie_secure=True, allowed_origins=("https://example.com",))
+    settings = replace(client.app.state.settings, cookie_secure=True, allowed_origins=("https://example.com",), allowed_hosts=("example.com",))
     with TestClient(create_app(settings), base_url="https://example.com", headers={"Origin": "https://example.com"}) as secure:
         register(secure)
         response = login(secure)

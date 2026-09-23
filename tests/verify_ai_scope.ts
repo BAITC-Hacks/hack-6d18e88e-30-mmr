@@ -18,7 +18,7 @@ for (const testCase of cases) {
   assert.equal(actual, testCase.code, testCase.draft);
 }
 for (const draft of seedDrafts) assert.doesNotThrow(() => assertTaskScope(draft.text, draft.industry));
-for (const task of seedTasks) assert.doesNotThrow(() => assertTaskScope(task.context + ' ' + task.need, task.industry));
+for (const task of seedTasks) assert.doesNotThrow(() => assertTaskScope(task.context + ' ' + task.need, task.industry), task.id);
 
 const originalFetch = globalThis.fetch;
 try {

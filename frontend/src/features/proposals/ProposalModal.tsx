@@ -4,6 +4,7 @@ import { useAppStore } from '../../app/store';
 import { Button } from '../../components/Button';
 import { Modal } from '../../components/Modal';
 import type { Task } from '../../types/task';
+import { proposalLabels } from './proposalLabels';
 
 export function ProposalModal({ task, onClose }: { task: Task; onClose: () => void }) {
   const { teams, activeTeamId, activeRole, addProposal, notify, proposals, navigate } = useAppStore();
@@ -34,7 +35,8 @@ export function ProposalModal({ task, onClose }: { task: Task; onClose: () => vo
   function fillExample() { setIdea(`Предлагаем проверить решение задачи «${task.title}» на небольшом пилоте. Начнём с анализа процесса и данных, затем соберём прототип для пользователей.`); setPlan('1. Kickoff: согласовать цель и доступ к данным.\n2. За 5 дней собрать работающий прототип.\n3. Проверить решение с пользователями и измерить результат.\n4. Передать исходный код, документацию и рекомендации.'); setTime('14 дней: 3 дня анализ, 7 дней разработка, 4 дня проверка'); setError(''); }
   return <Modal open onClose={onClose} title={`Предложение команды ${team?.name ?? '—'}`} wide>
     <p className="proposal-task-name">{task.title}</p>
-    {existing ? <div className="stack"><div className="notice">Ваша команда уже отправила предложение на эту задачу.</div><div className="modal-actions"><Button variant="secondary" onClick={onClose}>Закрыть</Button><Button onClick={() => { onClose(); navigate('my-proposals'); }}>Посмотреть отклик</Button></div></div> : <form className="stack proposal-form" onSubmit={submit}>
+    {existing && <div className="stack"><div className="notice">У вашей команды уже есть предложение на эту задачу: {proposalLabels[existing.status]}. Можно отправить ещё одну идею — прежний отклик сохранится.</div><div className="modal-actions"><Button variant="secondary" onClick={() => { onClose(); navigate('my-proposals'); }}>Посмотреть отклики</Button></div></div>}
+    <form className="stack proposal-form" onSubmit={submit}>
       <p className="muted">Расскажите о подходе и ожидаемых сроках. Команду выбирает бизнес — независимо от рейтинга задачи.</p>
       <label className="field"><span>Идея и подход <span aria-hidden="true">*</span></span><textarea value={idea} onChange={(event) => setIdea(event.target.value)} placeholder="Как вы предлагаете решить задачу?" rows={4} required maxLength={6000} /></label>
       <label className="field"><span>План реализации <span aria-hidden="true">*</span></span><textarea value={plan} onChange={(event) => setPlan(event.target.value)} placeholder="Основные шаги, инструменты и результат каждого этапа" rows={5} required maxLength={6000} /></label>
@@ -43,6 +45,6 @@ export function ProposalModal({ task, onClose }: { task: Task; onClose: () => vo
       {!team && <p className="notice notice-warning" role="alert">Выберите активную команду в каталоге, затем откройте форму снова.</p>}
       {teamChanged && <p className="notice notice-warning" role="alert">Активная команда изменилась. Эта форма относится к {team?.name ?? 'предыдущей команде'}. Закройте её и откройте предложение для нужной команды.</p>}
       <div className="modal-actions proposal-actions"><Button type="button" variant="ghost" onClick={fillExample}>Заполнить пример</Button><div className="button-row"><Button type="button" variant="secondary" onClick={onClose}>Отмена</Button><Button type="submit" disabled={!team || teamChanged || activeRole !== 'student'}>Отправить предложение <span aria-hidden="true">↗</span></Button></div></div>
-    </form>}
+    </form>
   </Modal>;
 }

@@ -1,0 +1,238 @@
+.app-shell { background: var(--bg); }
+:where(.app-shell) h1 { font-family: var(--font-display); font-size: clamp(27px, 2.6vw, 40px); font-weight: 600; letter-spacing: -.055em; line-height: 1.23; }
+:where(.app-shell) h2, :where(.app-shell) h3 { letter-spacing: -.035em; }
+:where(.app-shell) ::selection { color: var(--on-action); background: var(--action); }
+:where(.app-shell) :is(button,a,input,textarea,select,summary):focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+:where(.app-shell) .eyebrow { font-size: 11px; letter-spacing: .12em; }
+:where(.app-shell) .button { min-height: 46px; padding: 12px 18px; border-radius: calc(var(--radius) * .5); font-weight: 750; }
+:where(.app-shell) .button-primary { background: var(--action); color: var(--on-action); }
+:where(.app-shell) .button-primary:hover:not(:disabled) { background: var(--action-hover); }
+:where(.app-shell) .button-secondary, :where(.app-shell) .modal, :where(.app-shell) .modal-header, :where(.app-shell) .toast { background: var(--surface); }
+:where(.app-shell) .button-ghost { color: var(--accent); }
+:where(.app-shell) .panel { border-radius: var(--radius); }
+:where(.app-shell) .notice { color: var(--accent); }
+:where(.app-shell) .notice-error { color: var(--danger); }
+:where(.app-shell) .notice-warning { color: #76551e; }
+:where(.app-shell) .icon-button { min-width: 44px; min-height: 44px; }
+:where(.app-shell) .sidebar { width: 248px; padding: 30px 18px 18px; background: var(--ink); color: var(--on-ink); border: 0; overflow-y: auto; }
+:where(.app-shell) .brand { font-size: 26px; color: var(--on-ink); gap: 12px; margin-bottom: 43px; letter-spacing: -.06em; }
+:where(.app-shell) .brand-mark { background: transparent; color: var(--action); border: 1px solid var(--ink-muted); border-radius: 50%; width: 42px; height: 42px; }
+:where(.app-shell) .brand-subtitle { font-size: 8px; letter-spacing: .12em; color: var(--ink-muted); margin-top: 4px; }
+:where(.app-shell) .workspace-label { font-size: 10px; color: var(--ink-muted); letter-spacing: .09em; }
+:where(.app-shell) .nav-item { color: var(--ink-muted); min-height: 46px; padding: 12px; font-size: 13px; border-radius: calc(var(--radius) * .5); }
+:where(.app-shell) .nav-item:hover { color: var(--on-ink); background: #ffffff10; }
+:where(.app-shell) .nav-item.active { background: var(--action); color: var(--on-action); font-weight: 800; }
+:where(.app-shell) .nav-count { border-color: currentColor; font-size: 11px; }
+:where(.app-shell) .nav-divider, :where(.app-shell) .sidebar-footer { border-color: #ffffff26; }
+:where(.app-shell) .nav-divider { background: #ffffff26; }
+:where(.app-shell) .toggle-dot.on { background: var(--action); }
+:where(.app-shell) .sidebar-note { padding: 38px 12px 24px; color: var(--on-ink); }
+:where(.app-shell) .sidebar-note .sidebar-note-index { color: var(--ink-muted); font: 28px/1.2 var(--font-body); letter-spacing: -.06em; }
+:where(.app-shell) .sidebar-note h3 { font-size: 17px; font-weight: 650; line-height: 1.5; margin-block: 15px 10px; }
+:where(.app-shell) .sidebar-note p { color: var(--ink-muted); font-size: 12px; }
+:where(.app-shell) .sidebar-note > span:last-child { color: var(--ink-muted); font-size: 9px; }
+:where(.app-shell) .sidebar-footer strong { font-size: 11px; }
+:where(.app-shell) .sidebar-footer small { color: var(--ink-muted); font-size: 10px; }
+:where(.app-shell) .avatar { background: #ffffff16; color: var(--on-ink); flex-shrink: 0; }
+:where(.app-shell) .sidebar :is(button,a):focus-visible { outline-color: var(--on-ink); }
+:where(.app-shell) .main-shell { margin-left: 248px; }
+:where(.app-shell) .topbar { min-height: 80px; padding: 16px 38px; background: var(--bg); }
+:where(.app-shell) .breadcrumb, :where(.app-shell) .live-label { font-size: 12px; color: var(--muted); }
+:where(.app-shell) .topbar-actions { gap: 22px; }
+:where(.app-shell) .role-switch { background: transparent; border-radius: calc(var(--radius) * .6); padding: 3px; }
+:where(.app-shell) .role-switch button { min-height: 38px; font-size: 12px; padding-inline: 17px; color: var(--muted); }
+:where(.app-shell) .role-switch button.selected { background: var(--ink); color: var(--on-ink); box-shadow: none; }
+:where(.app-shell) .main-content { padding: 32px 38px 20px; }
+:where(.app-shell) .workspace-page { gap: 26px; }
+:where(.app-shell) .workspace-page > .page-heading { align-items: center; }
+:where(.app-shell) .workspace-page > .page-heading > button { margin-top: 0; }
+:where(.app-shell) .workspace-page > .page-heading p { font-size: 13px; max-width: 610px; }
+:where(.app-shell) .workspace-page > .page-heading .eyebrow { margin-bottom: 12px; }
+:where(.app-shell) .business-intro { grid-template-columns: minmax(0, 1.25fr) minmax(265px, .85fr); gap: 24px 34px; padding: 35px 0 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: transparent; overflow: visible; }
+:where(.app-shell) .business-intro .intro-copy { align-self: center; padding: 12px 0 22px; }
+:where(.app-shell) .business-intro .intro-copy > .eyebrow { color: var(--muted); font-size: 10px; }
+:where(.app-shell) .business-intro h2 { font-family: var(--font-display); font-size: clamp(30px, 3vw, 47px); font-weight: 600; line-height: 1.23; letter-spacing: -.055em; margin: 22px 0; color: var(--text); }
+:where(.app-shell) .business-intro h2 span { color: var(--accent); }
+:where(.app-shell) .business-intro .intro-copy > p { font-size: 14px; line-height: 1.85; color: var(--muted); max-width: 450px; margin-bottom: 25px; }
+:where(.app-shell) .intro-caption { display: block; font-size: 11px; color: var(--muted); margin-top: 15px; }
+:where(.app-shell) .intro-feature { background: var(--ink); color: var(--on-ink); border-radius: var(--radius); padding: 25px 27px 0; display: flex; flex-direction: column; min-width: 0; }
+:where(.app-shell) .intro-feature-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--ink-muted); font-size: 10px; letter-spacing: .12em; }
+:where(.app-shell) .intro-feature-top > span:last-child { font-size: 25px; color: var(--on-ink); }
+:where(.app-shell) .intro-feature-score { display: flex; align-items: center; gap: 16px; margin: 16px 0 20px; }
+:where(.app-shell) .intro-feature-score strong { font-family: var(--font-display); font-size: clamp(58px, 5.5vw, 88px); letter-spacing: -.075em; line-height: 1.1; font-weight: 600; }
+:where(.app-shell) .intro-feature-score > span { font-size: 11px; line-height: 1.9; color: var(--ink-muted); }
+:where(.app-shell) .intro-feature-meter { height: 7px; background: #ffffff20; border-radius: 2px; overflow: hidden; }
+:where(.app-shell) .intro-feature-meter > span { display: block; height: 100%; background: var(--action); }
+:where(.app-shell) .intro-feature-body { margin: 23px 0 20px; }
+:where(.app-shell) .intro-feature-body .badge { background: #ffffff13; color: var(--on-ink); font-size: 10px; border: 1px solid #ffffff30; }
+:where(.app-shell) .intro-feature-body h3 { font-size: 20px; line-height: 1.45; margin: 12px 0 8px; overflow-wrap: anywhere; }
+:where(.app-shell) .intro-feature-body p { color: var(--ink-muted); font-size: 12px; margin: 0; }
+:where(.app-shell) .intro-feature-link { background: none; border: 0; border-top: 1px solid #ffffff30; padding: 16px 0; display: flex; justify-content: space-between; align-items: center; color: var(--on-ink); font-size: 12px; font-weight: 700; margin-top: auto; text-align: left; min-height: 48px; }
+:where(.app-shell) .intro-feature-link:hover { color: var(--ink-muted); }
+:where(.app-shell) .intro-feature-link:focus-visible { outline-color: var(--on-ink); }
+:where(.app-shell) .intro-feature-empty { justify-content: center; padding-bottom: 25px; gap: 20px; }
+:where(.app-shell) .intro-feature-empty .eyebrow, :where(.app-shell) .intro-feature-empty p { color: var(--ink-muted); }
+:where(.app-shell) .intro-feature-empty > strong { font-size: 52px; letter-spacing: -.06em; }
+:where(.app-shell) .intro-path { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 22px 0; border-bottom: 1px solid var(--border); }
+:where(.app-shell) .intro-path > div { display: flex; gap: 12px; align-items: center; }
+:where(.app-shell) .intro-path span { color: var(--muted); font: 12px Consolas, monospace; }
+:where(.app-shell) .intro-path strong { font-size: 12px; font-weight: 650; }
+:where(.app-shell) .business-metrics { border: 0; background: transparent; border-radius: 0; padding: 5px 0 9px; }
+:where(.app-shell) .business-metric { font-size: 12px; padding-inline: 24px; gap: 10px; border-color: var(--border); }
+:where(.app-shell) .business-metric:first-child { padding-left: 0; }
+:where(.app-shell) .business-metric strong { font-size: 44px; letter-spacing: -.07em; font-weight: 550; }
+:where(.app-shell) .business-metric .muted { font-size: 11px; }
+:where(.app-shell) .business-tasks-panel { background: var(--surface); border-color: var(--border); }
+:where(.app-shell) .business-task-info h3 { font-size: 16px; font-weight: 650; }
+:where(.app-shell) .business-task-info > .tags .eyebrow { font-size: 10px; }
+:where(.app-shell) .business-task-info > .tags .badge { font-size: 10px; }
+:where(.app-shell) .task-row-stat span { font-size: 11px; color: var(--muted); }
+:where(.app-shell) .task-row-stat strong { font-weight: 650; }
+:where(.app-shell) .business-task-row > button { font-size: 12px; }
+:where(.app-shell) .business-task-row, :where(.app-shell) .milestone-list li { border-color: var(--border); }
+:where(.app-shell) .task-grid { grid-template-columns: 1fr; gap: 0; border-top: 1px solid var(--border); }
+:where(.app-shell) .task-card { display: grid; grid-template-columns: minmax(0,1fr) 200px; gap: 0 30px; padding: 27px 0 22px; border: 0; border-bottom: 1px solid var(--border); background: transparent; border-radius: 0; }
+:where(.app-shell) .task-card-top { grid-column: 2; grid-row: 1 / 4; flex-direction: column-reverse; justify-content: flex-end; align-items: flex-end; gap: 12px; margin: 0; padding: 5px 0; }
+:where(.app-shell) .task-score strong { font-family: var(--font-display); font-size: 44px; font-weight: 550; letter-spacing: -.07em; }
+:where(.app-shell) .task-score span { font-size: 12px; color: var(--muted); }
+:where(.app-shell) .task-card .task-industry { grid-column: 1; grid-row: 1; color: var(--muted); font-size: 11px; justify-content: flex-start; gap: 18px; }
+:where(.app-shell) .task-index { color: var(--muted); }
+:where(.app-shell) .task-card h2 { grid-column: 1; grid-row: 2; font-size: 23px; font-weight: 650; max-width: 680px; margin: 12px 0; }
+:where(.app-shell) .task-description { grid-column: 1; grid-row: 3; min-height: 0; margin-bottom: 16px; color: var(--muted); font-size: 14px; -webkit-line-clamp: 2; }
+:where(.app-shell) .task-card > .tags { grid-column: 1; grid-row: 4; padding-bottom: 0; margin: 0; }
+:where(.app-shell) .task-card-footer { grid-column: 2; grid-row: 4 / 6; border: 0; padding: 0; font-size: 12px; justify-content: flex-end; gap: 20px; color: var(--muted); margin: 0; }
+:where(.app-shell) .task-card-footer button { font-size: 13px; }
+:where(.app-shell) .task-title-button:hover { color: var(--accent); }
+:where(.app-shell) .tag { background: var(--surface) !important; color: var(--muted) !important; border-color: var(--border); font-size: 11px; }
+:where(.app-shell) .match-summary { grid-column: 1; margin: 15px 0 0; border-radius: calc(var(--radius) * .5); padding: 8px 12px; width: fit-content; background: var(--accent-soft); color: var(--accent); }
+:where(.app-shell) .catalog-total strong { color: var(--text); font-family: var(--font-display); font-weight: 500; }
+:where(.app-shell) .catalog-total span { color: var(--muted); }
+:where(.app-shell) .team-selector, :where(.app-shell) .match-explanation { background: var(--accent-soft); border-color: var(--border); }
+:where(.app-shell) .team-selector > .field > span, :where(.app-shell) .team-points span { color: var(--muted); font-size: 11px; }
+:where(.app-shell) .team-points strong { color: var(--accent); }
+:where(.app-shell) .team-selector select { background: var(--surface); }
+:where(.app-shell) .detail-field h3, :where(.app-shell) .proposal-content-grid h3, :where(.app-shell) .match-keywords h4, :where(.app-shell) .team-profile-grid h3 { color: var(--muted); font-size: 11px; }
+:where(.app-shell) .proposal-plan a, :where(.app-shell) .business-proposal a, :where(.app-shell) .comparison-table a, :where(.app-shell) .proposal-plan summary { color: var(--accent); }
+:where(.app-shell) .empty-state, :where(.app-shell) .inspector-code { background: var(--surface); border-color: var(--border); }
+:where(.app-shell) .inspector-code { border: 1px solid var(--border); }
+:where(.app-shell) .builder-stepper button { min-height: 56px; }
+:where(.app-shell) .rating-panel { border-top: 4px solid var(--accent); }
+:where(.app-shell) .rating-panel h2 { font-family: var(--font-display); font-size: 17px; }
+:where(.app-shell) .activity-item strong { font-size: 13px; }
+:where(.app-shell) .activity-item p, :where(.app-shell) .activity-item time { font-size: 12px; }
+:where(.app-shell) .page-footer { font-size: 11px; color: var(--muted); }
+:where(.app-shell) .demo-bar { left: 270px; right: 22px; background: var(--surface); border-color: var(--border); border-radius: var(--radius); padding: 12px 16px; gap: 16px; box-shadow: 0 8px 30px #00000012; }
+:where(.app-shell) .demo-title { font-size: 10px; }
+:where(.app-shell) .demo-title small { font-size: 10px; }
+:where(.app-shell) .demo-steps { min-width: 0; overflow-x: auto; gap: 6px; padding: 4px; scroll-padding-inline: 4px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+:where(.app-shell) .demo-step { min-width: 54px; min-height: 48px; padding: 3px 4px; font-size: 10px; flex-shrink: 0; gap: 4px; }
+:where(.app-shell) .demo-step > span { width: 25px; height: 25px; border-color: var(--border); }
+:where(.app-shell) .demo-step.active > span { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+:where(.app-shell) .demo-step.active { color: var(--text); }
+:where(.app-shell) .demo-reset { padding-left: 8px; }
+:where(.app-shell) .demo-reset .button { font-size: 12px; }
+:root[data-design='atelier'] :where(.app-shell) .business-intro h2 { font-size: clamp(42px, 4.4vw, 65px); line-height: 1.04; letter-spacing: -.05em; font-weight: 500; }
+:root[data-design='atelier'] :where(.app-shell) .intro-feature { border-radius: 90px 9px 9px 9px; padding-top: 35px; }
+:root[data-design='atelier'] :where(.app-shell) .intro-feature-score strong { font-family: Georgia, serif; font-size: 100px; }
+:root[data-design='atelier'] :where(.app-shell) h1 { font-size: clamp(32px, 3.2vw, 46px); font-weight: 500; }
+:root[data-design='index'] :where(.app-shell) .sidebar { background: var(--surface); color: var(--text); border-right: 1px solid var(--border); }
+:root[data-design='index'] :where(.app-shell) .sidebar :is(.brand,.sidebar-note,.sidebar-footer) { color: var(--text); }
+:root[data-design='index'] :where(.app-shell) .sidebar :where(.brand-subtitle,.workspace-label,.nav-item,.sidebar-note-index,.sidebar-note p,.sidebar-note > span:last-child,.sidebar-footer small) { color: var(--muted); }
+:root[data-design='index'] :where(.app-shell) .sidebar .nav-item.active { color: var(--on-action); background: var(--action); }
+:root[data-design='index'] :where(.app-shell) .sidebar .nav-item:hover:not(.active) { background: var(--accent-soft); color: var(--accent); }
+:root[data-design='index'] :where(.app-shell) .sidebar .avatar { background: var(--accent-soft); color: var(--accent); }
+:root[data-design='index'] :where(.app-shell) .sidebar .brand-mark { color: var(--accent); border-color: var(--border); }
+:root[data-design='index'] :where(.app-shell) .sidebar .nav-divider { background: var(--border); }
+:root[data-design='index'] :where(.app-shell) .sidebar-footer { border-color: var(--border); }
+:root[data-design='index'] :where(.app-shell) .sidebar :is(button,a):focus-visible { outline-color: var(--accent); }
+:root[data-design='index'] :where(.app-shell) .intro-feature { background: var(--action); color: var(--on-action); }
+:root[data-design='index'] :where(.app-shell) .intro-feature :is(.intro-feature-top,.intro-feature-score > span,.intro-feature-body p) { color: #e2eaff; }
+:root[data-design='index'] :where(.app-shell) .intro-feature :is(.intro-feature-link:hover,.intro-feature-empty .eyebrow,.intro-feature-empty p) { color: var(--on-action); }
+:root[data-design='index'] :where(.app-shell) .intro-feature-empty :is(.eyebrow,p) { color: var(--on-action); }
+:root[data-design='index'] :where(.app-shell) .intro-feature-meter > span { background: white; }
+:root[data-design='index'] :where(.app-shell) .business-intro h2 { font-size: clamp(38px, 3.8vw, 59px); letter-spacing: -.07em; }
+@media (prefers-reduced-motion: no-preference) { :where(.app-shell) .button, :where(.app-shell) .nav-item, :where(.app-shell) .intro-feature-link { transition: background-color 110ms ease-out, color 110ms ease-out; }
+ }
+@media (max-width: 1250px) { :where(.app-shell) .sidebar { width: 218px; padding-inline: 12px; }
+:where(.app-shell) .main-shell { margin-left: 218px; }
+:where(.app-shell) .main-content, :where(.app-shell) .topbar { padding-inline: 26px; }
+:where(.app-shell) .demo-bar { left: 234px; }
+:where(.app-shell) .demo-title { display: none; }
+:where(.app-shell) .business-intro { gap: 22px; grid-template-columns: minmax(0,1.1fr) minmax(245px,.9fr); }
+:where(.app-shell) .business-intro h2 { font-size: 31px; }
+:where(.app-shell) .intro-feature { padding-inline: 23px; }
+:where(.app-shell) .intro-feature-score strong { font-size: 65px; }
+:where(.app-shell) .intro-path strong { font-size: 11px; }
+:where(.app-shell) .intro-path > div { gap: 8px; }
+ }
+@media (max-width: 1000px) { :where(.app-shell) .business-intro { grid-template-columns: 1fr; }
+:where(.app-shell) .business-intro h2 { font-size: 43px; }
+:where(.app-shell) .intro-feature { max-width: none; }
+:where(.app-shell) .intro-feature-score strong { font-size: 74px; }
+:where(.app-shell) .business-metric { padding-inline: 15px; }
+:where(.app-shell) .business-metric strong { font-size: 36px; }
+:where(.app-shell) .business-metric span { font-size: 11px; }
+:where(.app-shell) .task-card { grid-template-columns: minmax(0,1fr) 140px; gap: 0 20px; }
+:where(.app-shell) .task-card-footer { flex-direction: column; gap: 0; align-items: flex-end; }
+ }
+@media (max-width: 760px) { :where(.app-shell) .sidebar { position: static; width: auto; padding: 18px 16px 12px; overflow: visible; }
+:where(.app-shell) .brand { margin-bottom: 19px; font-size: 24px; }
+:where(.app-shell) .brand-subtitle { font-size: 8px; }
+:where(.app-shell) .sidebar nav { gap: 6px; padding: 4px; margin-inline: -4px; scrollbar-width: thin; scrollbar-color: var(--ink-muted) transparent; }
+:where(.app-shell) .nav-item { min-height: 44px; font-size: 12px; padding: 10px 12px; margin: 0; }
+:where(.app-shell) .sidebar nav[aria-label='Инструменты'] { margin-top: 4px; }
+:where(.app-shell) .sidebar-note { display: none; }
+:where(.app-shell) .main-shell { margin-left: 0; }
+:where(.app-shell) .topbar { min-height: 68px; padding: 12px 20px; }
+:where(.app-shell) .breadcrumb { font-size: 11px; }
+:where(.app-shell) .breadcrumb span { padding-inline: 6px; }
+:where(.app-shell) .topbar-actions { gap: 0; }
+:where(.app-shell) .role-switch button { min-height: 40px; padding-inline: 12px; }
+:where(.app-shell) .main-content { padding: 28px 20px 20px; }
+:where(.app-shell) .workspace-page { gap: 24px; }
+:where(.app-shell) .workspace-page > .page-heading { align-items: flex-start; gap: 16px; }
+:where(.app-shell) .demo-bar { left: 10px; right: 10px; bottom: 10px; padding: 7px; gap: 5px; }
+:where(.app-shell) .demo-steps { justify-content: flex-start; }
+:where(.app-shell) .demo-step { min-width: 58px; min-height: 52px; font-size: 10px; }
+:where(.app-shell) .demo-reset .button { font-size: 0; min-width: 44px; min-height: 44px; padding: 10px; }
+:where(.app-shell) .demo-reset { padding-left: 4px; }
+:where(.app-shell) .with-demo .main-content { padding-bottom: 120px; }
+:where(.app-shell) :where(input:not([type=checkbox]):not([type=radio]),select,textarea) { font-size: 16px; min-height: 46px; }
+:where(.app-shell) .page-footer { margin-top: 35px; }
+ }
+@media (max-width: 600px) { :where(.app-shell) h1 { font-size: 28px; }
+:where(.app-shell) .eyebrow { font-size: 10px; }
+:where(.app-shell) .workspace-page > .page-heading > button { margin-top: 0; }
+:where(.app-shell) .business-intro { padding-top: 25px; gap: 22px; }
+:where(.app-shell) .business-intro .intro-copy { padding-top: 0; padding-bottom: 0; }
+:where(.app-shell) .business-intro h2 { font-size: clamp(28px, 8vw, 43px); margin-block: 20px; }
+:where(.app-shell) .business-intro .intro-copy > p { font-size: 14px; }
+:where(.app-shell) .intro-feature { padding-inline: 24px; }
+:where(.app-shell) .intro-feature-score strong { font-size: 76px; }
+:where(.app-shell) .intro-feature-body h3 { font-size: 20px; }
+:where(.app-shell) .intro-path { grid-template-columns: 1fr; gap: 16px; padding-block: 4px 24px; }
+:where(.app-shell) .intro-path strong { font-size: 13px; }
+:where(.app-shell) .intro-path > div { gap: 15px; }
+:where(.app-shell) .business-metrics { gap: 24px 0; }
+:where(.app-shell) .business-metric { padding-inline: 18px; }
+:where(.app-shell) .business-metric:nth-child(3) { padding-left: 0; }
+:where(.app-shell) .business-metric span { font-size: 12px; }
+:where(.app-shell) .business-metric .muted { font-size: 11px; }
+:where(.app-shell) .business-metric strong { font-size: 42px; }
+:where(.app-shell) .business-task-info h3 { font-size: 17px; }
+:where(.app-shell) .business-task-row > button { min-height: 46px; font-size: 12px; }
+:where(.app-shell) .task-card { display: flex; gap: 0; padding: 23px 0; }
+:where(.app-shell) .task-card-top { flex-direction: row; align-items: center; justify-content: space-between; padding: 0; margin-bottom: 20px; }
+:where(.app-shell) .task-score strong { font-size: 38px; }
+:where(.app-shell) .task-card h2 { font-size: 23px; }
+:where(.app-shell) .task-card .task-industry { font-size: 11px; }
+:where(.app-shell) .task-description { margin-bottom: 18px; -webkit-line-clamp: 3; }
+:where(.app-shell) .task-card-footer { flex-direction: row; align-items: center; justify-content: space-between; margin-top: 16px; }
+:where(.app-shell) .match-summary { margin-top: 18px; }
+:where(.app-shell) .catalog-results-heading { font-size: 12px; }
+:where(.app-shell) .section-heading h2 { font-size: 21px; }
+:where(.app-shell) .catalog-toolbar { gap: 15px 12px; }
+:where(.app-shell) .milestone-marker { width: 32px; height: 32px; }
+:root[data-design='atelier'] :where(.app-shell) .business-intro h2 { font-size: 47px; }
+:root[data-design='index'] :where(.app-shell) .business-intro h2 { font-size: 42px; }
+ }

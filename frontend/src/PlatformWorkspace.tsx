@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import type { Account } from './types/auth';
 import { useAppStore } from './app/store';
 import { createEmptyTask } from './data/syntheticData';
 import { Icon } from './components/Icon';
@@ -12,17 +13,18 @@ import { TeamPage } from './features/student/TeamPage';
 import { MilestoneTracker } from './features/milestones/MilestoneTracker';
 import { DemoBar } from './features/demo/DemoBar';
 import { PromptInspector } from './features/prompt-inspector/PromptInspector';
-import type { Account } from './types/auth';
+import './styles/fonts.css';
 import './styles/tokens.css';
 import './styles/global.css';
 import './styles/animations.css';
 import './styles/shell.css';
+import './styles/design.css';
 
 type Page = ReturnType<typeof useAppStore.getState>['page'];
 const businessNav: [Page,string,string][] = [['overview','Обзор','grid'],['builder','Создать задачу','plus'],['tasks','Мои задачи','folder'],['proposals','Отклики','chat']];
 const studentNav: [Page,string,string][] = [['catalog','Каталог задач','grid'],['recommendations','Рекомендации','spark'],['my-proposals','Мои отклики','chat'],['team','Моя команда','users']];
-interface PlatformWorkspaceProps { account?: Account | null; onAccount?: () => void }
-function Application({ account, onAccount }: PlatformWorkspaceProps) {
+interface PlatformWorkspaceProps { account?: Account | null; onAccount?: () => void; onDesign?: () => void }
+function Application({ account, onAccount, onDesign }: PlatformWorkspaceProps) {
   const s = useAppStore();
   function navigate(page: Page) {
     s.setDemoStep(0);
@@ -47,12 +49,12 @@ function Application({ account, onAccount }: PlatformWorkspaceProps) {
   return <div className={`app-shell ${s.demoEnabled ? 'with-demo' : ''}`}>
     <a href="#main-content" className="skip-link">Перейти к содержимому</a>
     <aside className="sidebar">
-      <button className="brand" onClick={()=>navigate(s.activeRole==='business'?'overview':'catalog')} aria-label="AI Sana — главная"><span className="brand-mark"><Icon name="leaf" size={26}/></span><span>AI Sana<span className="brand-subtitle">TASKRANK & TEAMMATCH</span></span></button>
+      <button className="brand" onClick={()=>navigate(s.activeRole==='business'?'overview':'catalog')} aria-label="AI Sana — главная"><span className="brand-mark"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M6 8h13l7 8-7 8H6l7-8Z" fill="currentColor"/><path d="m17 8-7 8 7 8" fill="none" stroke="var(--ink)" strokeWidth="2.5"/></svg></span><span>AI Sana<span className="brand-subtitle">ИДЕИ С ПРОДОЛЖЕНИЕМ</span></span></button>
       <div className="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
       <nav aria-label="Основная навигация">{nav.map(([page,title,icon])=><button key={page} className={`nav-item ${s.page===page ? 'active':''}`} aria-current={s.page===page?'page':undefined} onClick={()=>navigate(page)}><Icon name={icon} size={19}/><span>{title}</span>{page==='proposals' && <span className="nav-count">{s.proposals.filter(p=>p.status==='pending').length}</span>}</button>)}</nav>
       <div className="nav-divider"/>
-      <nav aria-label="Инструменты">{onAccount && <button className="nav-item" onClick={onAccount}><Icon name="users" size={19}/><span>{account ? 'Мой профиль' : 'Войти / профиль'}</span></button>}<button className={`nav-item ${s.page==='inspector'?'active':''}`} onClick={()=>navigate('inspector')}><Icon name="code" size={19}/><span>AI Inspector</span></button><button className="nav-item" aria-pressed={s.demoEnabled} onClick={()=>s.setDemoEnabled(!s.demoEnabled)}><Icon name="play" size={19}/><span>Demo Mode</span><span className={`toggle-dot ${s.demoEnabled?'on':''}`}/></button></nav>
-      <div className="sidebar-note"><Icon name="leaf" size={25}/><h3>Идеи становятся делом.</h3><p>Бизнес ставит задачу.<br/>Команды создают решение.</p><span>HACKALEM · AI SANA</span></div>
+      <nav aria-label="Инструменты">{onAccount && <button className="nav-item" onClick={onAccount}><Icon name="users" size={19}/><span>{account ? 'Мой профиль' : 'Войти / профиль'}</span></button>}{onDesign && <button className="nav-item" onClick={onDesign}><Icon name="grid" size={19}/><span>Дизайн-системы</span></button>}<button className={`nav-item ${s.page==='inspector'?'active':''}`} onClick={()=>navigate('inspector')}><Icon name="code" size={19}/><span>AI Inspector</span></button><button className="nav-item" aria-pressed={s.demoEnabled} onClick={()=>s.setDemoEnabled(!s.demoEnabled)}><Icon name="play" size={19}/><span>Demo Mode</span><span className={`toggle-dot ${s.demoEnabled?'on':''}`}/></button></nav>
+      <div className="sidebar-note"><span className="sidebar-note-index">01 → ∞</span><h3>Одна задача.<br/>Много возможностей.</h3><p>Объединяем опыт бизнеса<br/>и энергию команд.</p><span>HACKALEM · AI SANA</span></div>
       <div className="sidebar-footer"><span className="avatar">{account ? Array.from(account.full_name.trim())[0]?.toLocaleUpperCase('ru') : s.activeRole==='business'?'Б':'С'}</span><div><strong>{account?.full_name || 'Гостевой просмотр'}</strong><small>Локальное демо платформы</small></div></div>
     </aside>
     <div className="main-shell">
@@ -66,4 +68,4 @@ class AppBoundary extends Component<{children:ReactNode},{failed:boolean}> {
   static getDerivedStateFromError() {return {failed:true};}
   render() { return this.state.failed ? <main className="app-shell panel" style={{margin:'10vh auto',maxWidth:600}}><h1>Не удалось открыть экран</h1><p>Перезагрузите приложение. Сохранённые задачи останутся в этом браузере.</p><Button onClick={()=>window.location.reload()}>Перезагрузить</Button></main> : this.props.children; }
 }
-export default function PlatformWorkspace(props: PlatformWorkspaceProps) { return <AppBoundary><Application {...props}/></AppBoundary>; }
+export default function PlatformWorkspace(props: PlatformWorkspaceProps) { return <AppBoundary><Application {...props} /></AppBoundary>; }

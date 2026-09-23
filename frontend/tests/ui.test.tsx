@@ -24,6 +24,8 @@ const { resetBuilderSessions } = await import('../src/features/builder/builderSe
 const { useAiInspectorStore } = await import('../src/services/aiClient.ts');
 const { TASK_FIELDS } = await import('../src/app/constants.ts');
 const { STORAGE_KEY } = await import('../src/services/storageService.ts');
+const { calculateRating } = await import('../src/services/ratingService.ts');
+const { seedTasks } = await import('../src/data/syntheticData.ts');
 const realFetch = globalThis.fetch;
 let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
@@ -71,7 +73,7 @@ test('full business UI: demo draft → AI fallback → answers → live rating �
   assert.match((window.document.getElementById('draft-input') as HTMLTextAreaElement).value, /прогнозировать спрос/);
   assert.equal(demoTask().confirmed, false);
   assert.equal(demoTask().published, false);
-  const startingRating = demoTask().rating;
+  const startingPotential = calculateRating(demoTask()).potentialTotal;
 
   let resolveRequest!: (response: Response) => void;
   globalThis.fetch = async () => new Promise<Response>(resolve => { resolveRequest = resolve; });
@@ -81,13 +83,15 @@ test('full business UI: demo draft → AI fallback → answers → live rating �
   await act(async () => { resolveRequest(new Response(JSON.stringify(stub))); });
   assert.match(host.textContent || '', /Локальный режим уточнения/);
   assert.ok(host.querySelectorAll('.clarification-question').length >= 3);
-  assert.equal(demoTask().context, demoTask().rawDraft);
+  assert.equal(demoTask().need, demoTask().rawDraft, 'Fallback preserves explicit facts from the draft.');
+  assert.equal(demoTask().context, '', 'Fallback does not invent the current business process.');
   assert.equal(demoTask().availableData, '');
   assert.equal(useAiInspectorStore.getState().latest?.fallbackUsed, true);
 
   await clickDemo(3);
   await click(button('Заполнить примерные ответы'));
-  assert.ok(demoTask().rating > startingRating + 40);
+  assert.ok(calculateRating(demoTask()).potentialTotal > startingPotential + 40);
+  assert.equal(demoTask().rating, 0, 'Draft facts earn points only after business confirmation.');
   assert.equal(demoTask().fieldSources?.availableData, 'clarification');
   assert.equal(demoTask().confirmed, false, 'Demo answers never confirm business facts automatically.');
   assert.equal(demoTask().published, false);
@@ -96,13 +100,13 @@ test('full business UI: demo draft → AI fallback → answers → live rating �
   for (const { key } of TASK_FIELDS) assert.ok(window.document.getElementById(`task-field-${key}`));
   assert.equal(host.querySelectorAll('.rating-category').length, 7);
 
-  const completeRating = demoTask().rating;
+  const completePotential = calculateRating(demoTask()).potentialTotal;
   const criterion = demoTask().successCriteria;
   await setText('task-field-successCriteria', '');
-  assert.ok(demoTask().rating < completeRating, 'Rating immediately reflects a cleared success metric.');
-  assert.match(host.querySelector('.rating-improvements')?.textContent || '', /измеримую метрику/);
+  assert.ok(calculateRating(demoTask()).potentialTotal < completePotential, 'Potential immediately reflects a cleared success metric.');
+  assert.match(host.querySelector('.rating-improvements')?.textContent || '', /измеримые критерии/);
   await setText('task-field-successCriteria', criterion);
-  assert.equal(demoTask().rating, completeRating);
+  assert.equal(calculateRating(demoTask()).potentialTotal, completePotential);
   assert.equal(demoTask().fieldSources?.successCriteria, 'manual');
 
   await click(button('Проверить готовность'));
@@ -112,6 +116,7 @@ test('full business UI: demo draft → AI fallback → answers → live rating �
   assert.equal(button('Подтвердить карточку').disabled, false);
   await click(button('Подтвердить карточку'));
   assert.equal(demoTask().confirmed, true);
+  assert.equal(demoTask().rating, completePotential);
   assert.equal(demoTask().published, false, 'Confirmation and publication are separate actions.');
   await click(button('Перейти к публикации'));
   await click(button('Опубликовать задачу'));
@@ -170,7 +175,10 @@ test('student proposal → business choice → one-time milestone points → stu
   assert.equal(milestones.length, 4);
   const initialPoints = current().teams.find(team => team.id === teamId)!.progressPoints;
   await clickDemo(8);
-  const prototypeRow = [...host.querySelectorAll<HTMLElement>('.milestone-list li')].find(item => item.querySelector('h4')?.textContent === 'Prototype')!;
+  const teamName = current().teams.find(team => team.id === teamId)!.name;
+  const project = [...host.querySelectorAll<HTMLElement>('section.panel')].find(item => item.querySelector(':scope > .eyebrow')?.textContent === teamName);
+  assert.ok(project, 'The selected team has its own project milestones.');
+  const prototypeRow = [...project.querySelectorAll<HTMLElement>('.milestone-list li')].find(item => item.querySelector('h4')?.textContent === 'Prototype')!;
   assert.ok(prototypeRow);
   await click(button('Подтвердить этап', prototypeRow));
   assert.equal(current().teams.find(team => team.id === teamId)!.progressPoints, initialPoints + 10);
@@ -189,7 +197,44 @@ test('student proposal → business choice → one-time milestone points → stu
   assert.equal([...ownProposal.querySelectorAll('button')].some(item => item.textContent?.includes('Подтвердить этап')), false, 'Student sees milestone progress without business controls.');
 });
 
+test('a team submits another idea from task details without replacing its selected proposal', async () => {
+  const original = current().proposals.find(proposal => proposal.status === 'selected'
+    && current().tasks.some(task => task.id === proposal.taskId && task.published));
+  assert.ok(original, 'A selected proposal on a published task is available.');
+  const before = structuredClone(original);
+  const task = current().tasks.find(item => item.id === original.taskId)!;
+  const ids = new Set(current().proposals.map(proposal => proposal.id));
+  await act(async () => { current().setActiveRole('student'); current().setActiveTeam(original.teamId); });
+  await click(button(task.title));
+  const details = host.querySelector<HTMLDialogElement>('dialog[open]')!;
+  assert.ok(details);
+  assert.ok(button('Перейти к моему отклику', details));
+  assert.match(details.textContent || '', /Выбрано бизнесом/);
+  await click(button('Ещё предложение', details));
+  const formDialog = host.querySelector<HTMLDialogElement>('dialog[open]')!;
+  assert.ok(formDialog.querySelector('form'), 'Existing proposals do not hide the submission form.');
+  assert.ok(button('Посмотреть отклики', formDialog));
+  await click(button('Заполнить пример', formDialog));
+  const idea = formDialog.querySelector<HTMLTextAreaElement>('textarea')!;
+  const secondIdea = 'Другой подход: интерактивный прототип для проверки альтернативного решения.';
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')!.set!.call(idea, secondIdea);
+    idea.dispatchEvent(new window.Event('input', { bubbles: true }));
+  });
+  await click(button('Отправить предложение', formDialog));
+  const added = current().proposals.filter(proposal => !ids.has(proposal.id));
+  assert.equal(added.length, 1);
+  assert.equal(added[0].taskId, original.taskId);
+  assert.equal(added[0].teamId, original.teamId);
+  assert.equal(added[0].idea, secondIdea);
+  assert.equal(added[0].status, 'pending');
+  assert.notEqual(added[0].id, original.id);
+  assert.deepEqual(current().proposals.find(proposal => proposal.id === original.id), before);
+  assert.equal(host.querySelector('dialog[open]'), null);
+});
+
 test('demo reset requires its dialog confirmation and cancel preserves user work', async () => {
+  const initialMilestoneCount = current().milestones.length;
   await clickDemo(1);
   await setText('draft-input', 'Наш новый черновик должен сохраниться при отмене сброса.');
   const savedId = demoTask().id;
@@ -202,9 +247,9 @@ test('demo reset requires its dialog confirmation and cancel preserves user work
   await click(button('Сброс', host.querySelector('.demo-bar')!));
   resetDialog = host.querySelector<HTMLDialogElement>('dialog[open]')!;
   await click(button('Сбросить данные', resetDialog));
-  assert.equal(current().tasks.length, 10);
+  assert.equal(current().tasks.length, seedTasks.length);
   assert.equal(current().tasks.some(task => task.id === savedId), false);
-  assert.equal(current().milestones.length, 0);
+  assert.equal(current().milestones.length, initialMilestoneCount);
   assert.equal(current().page, 'overview');
   assert.equal(useAiInspectorStore.getState().latest, null);
 });

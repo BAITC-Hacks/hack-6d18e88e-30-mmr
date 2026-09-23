@@ -1,6 +1,34 @@
 # Integration history
 
-## dev + alim into integration/dev-alim — 2026-09-23
+## Current: updated platform-core into integration/dev-alim — 2026-09-23
+
+Inputs: the previous integration at `8ebac1a` and `origin/feature/platform-core` at `5bcd587`. The user explicitly selected the updated platform-core implementation. Earlier `alim` integration included an older core revision; it did not include these new commits.
+
+Current conflict decisions:
+
+- Take the incoming core store, persistence, rating, matching, AI and shared type contracts as a coherent set. Actual readiness points come only from filled, confirmed fields. `potentialTotal` reflects the current text after confirmation. Editing removes approval for changed fields and unpublishes the card; unchanged approved fields retain their points.
+- Take TeamMatch weights 35/25/20/20 and the combined seeds: 15 tasks, 10 teams, 11 proposals. Persist under `ai-sana-taskrank-v1`, version 2, with migration from earlier core state and `ai-sana-demo`.
+- Preserve multiple proposals per team/task, manual selection of one or more teams, and one-time milestone points. Reject duplicate proposal identifiers, not additional distinct proposals from the same team.
+- Retain the latest glass authentication/profile, email-delivery fixes and styled templates. `/` and `/auth` show authentication/profile; profile-to-workspace navigation rechecks the session. `/workspace` also supports guest demo. These connections do not create server-owned task records.
+- Integrate the incoming Signal, Atelier and Index design previews at `/design`, locally bundled fonts and the production-preview launcher `npm start`.
+- Keep the root `.env` as the canonical backend configuration, with `backend/.env` as fallback. Local cookie accounts use the Vite development server; production builds (including `npm start`) require public Supabase configuration for sign-in. Guest demo remains available separately.
+- Adopt the incoming gateway contract: when `API_ACCESS_TOKEN` is configured, all `/api/*` require it. The server-only `X-API-Access-Token` header preserves the separate Supabase user Bearer. Production requires this deployment token; it never belongs in client variables.
+- Keep regression coverage for accounts, mail, workspace navigation and core behavior under the common checks. Tests must use isolated databases and must not send real mail or invoke external AI.
+- Preserve the previously tested jsdom 30 dependency and separate test scripts. Keep account styling scoped while applying the incoming platform themes.
+- Clear cached workspace identity when opening the account screen, so logout followed by browser navigation cannot display an old profile name. Align proposal dialogs with the new store contract: an existing proposal no longer blocks another distinct idea from the same team.
+
+Current validation on 2026-09-23:
+
+- `npm run check`: passed on the final code — 473 Python tests, 53 Vitest tests, 42 Node frontend/DOM tests, six core regression suites, isolated HTTP smoke, repeatable SQL migrations/assertions, lint, TypeScript and production build.
+- `npm run test:start`: passed — occupied IPv4/IPv6 ports, cancellation, production assets/SPA/proxy, protected API refusal, configuration failure and process cleanup. The test used temporary storage with SMTP and AI providers disabled.
+- `pip check`: passed. Existing local backend configuration validates without modification; credentials were not printed. Python dependency versions and the previously validated frontend dependency set are unchanged.
+- Browser visual QA: not performed; no browser automation is available. DOM tests and builds do not verify appearance.
+- Real SMTP delivery, real Supabase Auth and external AI: not claimed by this merge.
+- Non-blocking warnings: upstream Starlette/httpx TestClient deprecation and a 726 kB main JavaScript chunk (206 kB gzip). The design preview is a separate lazy-loaded chunk.
+
+The earlier results below belong to their respective historical integrations and do not establish success of this new merge. The current work remains in `integration/dev-alim`; publishing and PR merges into `dev`/`main` are separate actions.
+
+## Previous: dev + alim into integration/dev-alim — 2026-09-23
 
 Inputs: `dev` at `ce9fec8`, saved account/profile/email polish at `26ae51c`, and `origin/alim` at `a8cef36`. The integration branch preserves both histories. `alim` already contains the platform-core merge, so that branch is not merged a second time.
 
@@ -14,7 +42,7 @@ Integration decisions:
 - Keep Vitest account tests, Node frontend/DOM tests and core regression suites as separate groups under the common `npm run check` entry point.
 - Update setup and team branch instructions in the root/frontend READMEs and `docs/TEAM_WORKFLOW.md`.
 
-Current integration validation on 2026-09-23:
+Validation of the previous integration at `8ebac1a` on 2026-09-23:
 
 - `npm run check`: passed — 429 Python tests, 34 Vitest account/integration tests, 35 Node frontend/DOM tests, six core regression suites, live loopback smoke, lint, TypeScript and production build.
 - `pip check`: passed. npm dependency installation reported zero vulnerabilities. No separate SQL migration check was run; migrations were not changed by this merge.
@@ -24,7 +52,7 @@ Current integration validation on 2026-09-23:
 
 The registration queue-failure regression now expects the shared middleware's safe HTTP 500 response and still verifies token/queue transaction rollback. Startup smoke retries temporary transport failures while the local server starts.
 
-The integration is prepared on its own branch. Publishing it and merging its PR into `dev`, then `main`, are separate team actions. The result statements below refer to the earlier `alim` integration, not to the current merge.
+This integration was prepared on its own branch. Publishing it and merging its PR into `dev`, then `main`, remain separate team actions. The result statements below refer to the still earlier `alim` integration.
 
 ## Earlier integration into alim — 2026-09-23
 

@@ -9,7 +9,8 @@
 ```dotenv
 VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YOUR_PUBLIC_KEY
-VITE_API_BASE_URL=http://localhost:8000
+# Пустое значение использует /api через proxy Vite.
+VITE_API_BASE_URL=
 ```
 
 Project URL и Publishable key находятся в панели проекта: **Connect** / **Settings → API Keys**. В `.env.local` не должно быть SMTP-пароля, пароля базы или secret/service-role ключа. Vite включает переменные `VITE_*` в клиентскую сборку. После изменения `.env.local` перезапустите Vite.
@@ -20,7 +21,7 @@ Project URL и Publishable key находятся в панели проекта
 AUTH_PROVIDER=supabase
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_YOUR_PUBLIC_KEY
-AUTH_PAGE_URL=http://localhost:5173
+AUTH_PAGE_URL=http://localhost:5173/auth
 UNSUBSCRIBE_PAGE_URL=http://localhost:8000/account
 
 # Только для серверной очереди рассылок; не нужен обычному входу.
@@ -28,6 +29,10 @@ SUPABASE_SECRET_KEY=sb_secret_YOUR_SERVER_ONLY_KEY
 ```
 
 Supabase также выбирается автоматически, если заданы его URL/публичный ключ; явный `AUTH_PROVIDER=supabase` делает режим понятным. `SUPABASE_SECRET_KEY` можно не задавать, пока нужны только регистрация, вход и восстановление. Для рассылок возьмите серверный secret key в **Settings → API Keys** и сохраните только в корневом `.env`, не во frontend и не в Git. Старая страница FastAPI `/account` остаётся обработчиком отписки от новостей, основной аккаунт теперь открывается в React. Настройки SMTP FastAPI и Supabase Auth раздельные: Supabase не читает локальный `.env`.
+
+В объединённой платформе вход и профиль открываются на `/` и `/auth`; кнопка из профиля ведёт на `/workspace` после повторной проверки сессии. Гостевое демо также доступно отдельно. Рабочие данные задач остаются в LocalStorage и не записываются в Supabase при входе. При публичном размещении FastAPI требует настройки защиты из [backend/README.md](../backend/README.md): gateway проверяет пользователя и добавляет серверный `X-API-Access-Token`, сохраняя его Supabase Bearer. Серверный токен нельзя включать в `VITE_*`; прямой незащищённый proxy не заменяет авторизацию.
+
+При запуске production-сборки через `npm start` публичные Supabase-переменные должны быть заполнены **до** сборки. После их изменения остановите запуск и повторите `npm start`. Для локальных аккаунтов SQLite используйте Vite dev-сервер по README и явный `AUTH_PROVIDER=local` в корневом `.env`.
 
 ## 2. Создание таблиц
 

@@ -306,6 +306,32 @@ describe('explicit local development adapter', () => {
     await expect(getAccessToken()).resolves.toBeNull();
   });
 
+  it.each([
+    ['', '/api/auth/me'],
+    ['http://localhost:8000///', 'http://localhost:8000/api/auth/me'],
+  ])('preserves the local proxy API base: %s', async (base, endpoint) => {
+    vi.stubEnv('VITE_API_BASE_URL', base);
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ detail: 'Not signed in' }), { status: 401 }));
+    const { authClient } = await load();
+    await expect(authClient.initialize()).resolves.toEqual({ account: null, mode: 'none' });
+    expect(fetch).toHaveBeenCalledWith(endpoint, expect.objectContaining({ credentials: 'include', method: 'GET' }));
+    expect(sdk.createClient).not.toHaveBeenCalled();
+  });
+
+  it('consumes legacy verification links at the demo root before contacting the API', async () => {
+    navigate('/#verify=legacy-verification');
+    vi.mocked(fetch).mockImplementation(async () => {
+      expect(page.hash).toBe('');
+      return new Response(JSON.stringify({ message: 'Email подтверждён.' }));
+    });
+    const { authClient } = await load();
+    await expect(authClient.initialize()).resolves.toMatchObject({ mode: 'verified' });
+    expect(fetch).toHaveBeenCalledWith('http://localhost:8000/api/auth/verify-email', expect.objectContaining({
+      body: JSON.stringify({ token: 'legacy-verification' }),
+    }));
+    expect(sdk.createClient).not.toHaveBeenCalled();
+  });
+
   it('keeps a legacy reset token only in memory and sends it once', async () => {
     navigate('/account#reset=legacy-secret');
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ message: 'Пароль изменён.' })));

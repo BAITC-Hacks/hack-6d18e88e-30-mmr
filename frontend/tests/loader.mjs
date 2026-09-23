@@ -18,8 +18,11 @@ registerHooks({
     return nextResolve(specifier, context);
   },
   load(url, context, nextLoad) {
-    if (url.startsWith('file:') && url.endsWith('/shared/aiScopePolicy.json')) return { format: 'module', source: `export default ${JSON.stringify(JSON.parse(readFileSync(fileURLToPath(url), 'utf8')))};`, shortCircuit: true };
     if (url.startsWith('file:') && /\.css(?:\?|$)/.test(url)) return { format: 'module', source: 'export default "";', shortCircuit: true };
+    if (url.startsWith(new URL('../../shared/', import.meta.url).href) && /\.json(?:\?|$)/.test(url)) {
+      const json = JSON.parse(readFileSync(fileURLToPath(url), 'utf8'));
+      return { format: 'module', source: `export default ${JSON.stringify(json)};`, shortCircuit: true };
+    }
     if (url.startsWith('file:') && /\.tsx?$/.test(url)) {
       const source = ts.transpileModule(readFileSync(fileURLToPath(url), 'utf8'), {
         fileName: fileURLToPath(url),

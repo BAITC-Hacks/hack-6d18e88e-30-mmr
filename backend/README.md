@@ -56,13 +56,16 @@ npm run dev
 Development принимает только loopback-клиентов и разрешённые Host/Origin. `--no-proxy-headers` сохраняет эту проверку.
 На всех API действуют лимиты запросов и строгая JSON-валидация; cookie-операции дополнительно требуют доверенный Origin.
 При `APP_ENV=production` обязательны `API_ALLOWED_HOSTS`, HTTPS `API_ALLOWED_ORIGINS` и серверный `API_ACCESS_TOKEN`
-из 32–256 символов; Swagger отключается, локальные cookie становятся Secure.
-При явно заданном `CORS_ORIGINS` он тоже должен содержать только разрешённые HTTPS origins в production.
+из 32–256 символов; Swagger отключается. Secure-cookie включаются по умолчанию; явное `COOKIE_SECURE=false` в production отклоняется.
+`API_ALLOWED_ORIGINS` имеет приоритет над прежним `CORS_ORIGINS`; используйте точные HTTPS origins в production.
 
-Deployment bearer-токен защищает AI-маршруты и предназначен для серверного gateway, который проверяет доступ пользователя.
-Его нельзя помещать в браузер или `VITE_*`. Зарегистрированные account/mail-маршруты проверяют свои cookie/одноразовые токены
-либо пользовательский Supabase bearer; `/api/auth/config` доступен для определения режима.
-Неизвестные пути и методы не получают исключение из deployment-проверки. Готовый серверный gateway в проект не входит.
+При заданном `API_ACCESS_TOKEN` все `/api/*`, включая account/mail/config, требуют серверный deployment-токен.
+Gateway передаёт его в `X-API-Access-Token`, сохраняя `Authorization: Bearer <токен пользователя>` для Supabase.
+Если отдельный заголовок отсутствует, серверный токен можно передать через `Authorization`; это не заменяет пользовательскую сессию.
+Account/mail-маршруты дополнительно проверяют свои cookie, одноразовые токены или пользовательский Supabase bearer.
+Токен gateway нельзя помещать в браузер или `VITE_*`; gateway должен отдельно проверять право доступа пользователя.
+Неизвестные пути и методы не получают исключение. В локальном development `API_ACCESS_TOKEN` по умолчанию пустой,
+поэтому frontend обращается к API напрямую. Готовый production gateway в проект не входит.
 
 ## Подключение Supabase
 

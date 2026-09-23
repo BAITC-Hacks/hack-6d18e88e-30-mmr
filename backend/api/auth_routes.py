@@ -12,6 +12,12 @@ from ..services.security import (COOKIE_NAME, DUMMY_PASSWORD_HASH, consume_token
                                  digest, passwords, rate_limit)
 
 router = APIRouter(prefix="/auth", tags=["Accounts"])
+
+
+def session_cookie_path(request: Request) -> str:
+    return request.scope.get("root_path", "").rstrip("/") + "/api"
+
+
 def mail_response(request: Request):
     # This describes the global transport, never whether the account exists.
     if request.app.state.settings.mail_backend == "file":
@@ -67,7 +73,7 @@ def login(payload: LoginRequest, request: Request, response: Response):
         db.execute("INSERT INTO sessions VALUES (?, ?, ?)",
                    (digest(token), user["id"], int(time.time()) + settings.session_hours * 3600))
     response.set_cookie(COOKIE_NAME, token, httponly=True, secure=settings.cookie_secure,
-                        samesite="lax", max_age=settings.session_hours * 3600, path="/api")
+                        samesite="lax", max_age=settings.session_hours * 3600, path=session_cookie_path(request))
     return dict(user)
 
 
@@ -80,7 +86,7 @@ def me(user=Depends(current_user)):
 def logout(request: Request, response: Response):
     with connect(request.app.state.settings) as db:
         db.execute("DELETE FROM sessions WHERE token_hash = ?", (digest(request.cookies.get(COOKIE_NAME, "")),))
-    response.delete_cookie(COOKIE_NAME, path="/api", httponly=True,
+    response.delete_cookie(COOKIE_NAME, path=session_cookie_path(request), httponly=True,
                            secure=request.app.state.settings.cookie_secure, samesite="lax")
     return {"message": "Вы вышли из аккаунта."}
 

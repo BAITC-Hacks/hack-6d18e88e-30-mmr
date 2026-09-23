@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import sys
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import pytest
 
@@ -29,13 +30,13 @@ os.environ['MAIL_DIRECTORY'] = str(Path(_account_test_directory.name) / 'mail')
 os.environ['MAIL_BACKEND'] = 'file'
 os.environ['AUTH_PROVIDER'] = 'local'
 os.environ['AUTH_MAIL_FORMAT'] = 'html'
-os.environ['UNSUBSCRIBE_PAGE_URL'] = 'http://localhost:8000/account'
+os.environ.pop('UNSUBSCRIBE_PAGE_URL', None)
 for setting in ('SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SECRET_KEY'):
     os.environ.pop(setting, None)
 os.environ['MAIL_WORKER_ENABLED'] = 'false'
 os.environ['MAIL_FROM'] = 'AI Sana <noreply@example.test>'
-os.environ['AUTH_PAGE_URL'] = 'http://localhost:8000/account'
-os.environ['COOKIE_SECURE'] = 'false'
+os.environ.pop('AUTH_PAGE_URL', None)
+os.environ.pop('COOKIE_SECURE', None)
 os.environ['SESSION_HOURS'] = '24'
 os.environ['SMTP_PORT'] = '587'
 for setting in ('SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 'CORS_ORIGINS'):
@@ -52,3 +53,11 @@ def reset_default_api_request_budget():
 
     # Applications created by individual security tests keep their own budgets.
     app.state.rate_limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+def prohibit_live_supabase_calls():
+    # Provider tests replace this with their own streaming mock. A missed mock
+    # must fail locally before it can contact a project on the network.
+    with patch("backend.services.supabase_gateway.httpx.stream", side_effect=AssertionError("Unexpected live Supabase request")):
+        yield

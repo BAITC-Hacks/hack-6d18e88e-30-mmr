@@ -39,6 +39,7 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
   const generation = useRef(0);
   const demoAnalyzed = useRef(false);
   const draft = task.rawDraft || '';
+  const industries = [...new Set(['Retail', 'Education', 'Healthcare', 'Logistics', 'FinTech', task.industry, ...seedTasks.map(item => item.industry)])].filter(Boolean);
   const rating = calculateRating(task);
   const emptyFields = TASK_FIELDS.filter(({ key }) => !task[key].trim()).map(({ key }) => key);
   const questions = analysis?.questions || createClarificationQuestions(emptyFields);
@@ -114,8 +115,8 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
     }
     if (!next.tags.length) next.tags = ['Python', 'Analytics'];
     save(next); setExampleAnswers(true);
-    const after = calculateRating(next).total;
-    useAppStore.getState().recordEvent('Добавлены демонстрационные ответы', `Рейтинг: ${rating.total} → ${after}`);
+    const after = calculateRating(next).potentialTotal;
+    useAppStore.getState().recordEvent('Добавлены демонстрационные ответы', `Потенциал после подтверждения: ${rating.potentialTotal} → ${after}`);
     useAppStore.getState().notify('Примерные ответы заполнены. Проверьте и адаптируйте их под свою задачу.');
   }
 
@@ -148,7 +149,7 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
           <div><span className="eyebrow">ШАГ 01</span><h2>Начните с бизнес-проблемы</h2><p className="muted">Опишите процесс, трудности и то, что хотите изменить. Остальное уточним вместе.</p></div>
           <label className="field" htmlFor="draft-input"><span>Опишите бизнес-задачу в свободной форме</span><textarea id="draft-input" rows={8} value={draft} disabled={loading || activeRole !== 'business'} placeholder="Мы хотим автоматизировать… Сейчас процесс устроен так…" onChange={(event) => save({ ...task, rawDraft: event.target.value })} /></label>
           <div className="form-grid">
-            <label className="field" htmlFor="draft-industry"><span>Отрасль</span><select id="draft-industry" value={task.industry} disabled={loading || activeRole !== 'business'} onChange={(event) => save({ ...task, industry: event.target.value })}>{['Retail', 'Education', 'Healthcare', 'Logistics', 'FinTech'].map((industry) => <option key={industry}>{industry}</option>)}</select></label>
+            <label className="field" htmlFor="draft-industry"><span>Отрасль</span><select id="draft-industry" value={task.industry} disabled={loading || activeRole !== 'business'} onChange={(event) => save({ ...task, industry: event.target.value })}>{industries.map((industry) => <option key={industry}>{industry}</option>)}</select></label>
             <label className="field" htmlFor="draft-example"><span>Попробовать на примере</span><select id="draft-example" value="" disabled={loading || activeRole !== 'business'} onChange={(event) => { const example = seedTasks.find((item) => item.id === event.target.value); if (example) { save({ ...task, rawDraft: example.rawDraft || example.context, industry: example.industry }); setAnalysis(null); } }}><option value="">Выберите пример черновика</option>{seedTasks.filter((item) => !item.published).map((example) => <option key={example.id} value={example.id}>{example.industry} · {example.title}</option>)}</select></label>
           </div>
           <div className="button-row"><Button disabled={loading || !draft.trim() || activeRole !== 'business'} onClick={() => void runAnalysis()}>{loading ? 'Анализируем задачу…' : 'Проанализировать с AI →'}</Button><Button variant="ghost" disabled={loading || !draft.trim()} onClick={() => { if (!task.context.trim()) updateField('context', draft.trim(), 'draft'); openEditor(); }}>Заполнить самостоятельно</Button></div>
@@ -157,7 +158,7 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
 
         {stage === 1 && <section className="panel stack">
           <div><span className="eyebrow">ШАГ 02</span><h2>Добавим конкретики</h2><p className="muted">Заполнено {TASK_FIELDS.length - emptyFields.length}/{TASK_FIELDS.length} полей. {emptyFields.length ? `Требует уточнения: ${emptyFields.length}.` : 'Проверьте ответы перед следующим шагом.'}</p></div>
-          {analysis?.fallbackUsed && <div className="notice notice-warning" role="status"><strong>Локальный режим уточнения</strong><p>{analysis.reason} Сохранили исходный текст в контекст и подготовили вопросы по незаполненным полям.</p><Button variant="ghost" disabled={loading} onClick={() => void runAnalysis()}>{loading ? 'Повторяем запрос…' : 'Повторить AI-анализ'}</Button></div>}
+          {analysis?.fallbackUsed && <div className="notice notice-warning" role="status"><strong>Локальный режим уточнения</strong><p>{analysis.reason} Извлекли явно указанные сведения и подготовили уточняющие вопросы.</p><Button variant="ghost" disabled={loading} onClick={() => void runAnalysis()}>{loading ? 'Повторяем запрос…' : 'Повторить AI-анализ'}</Button></div>}
           {analysis && !analysis.fallbackUsed && <div className="notice">Поля извлечены с помощью {analysis.provider}. Подтвердите сведения своими ответами.</div>}
           <div className="button-row"><Button variant="secondary" onClick={fillExamples} disabled={activeRole !== 'business' || loading}>Заполнить примерные ответы</Button><span className="muted">Демонстрационный пример для Retail</span></div>
           {exampleAnswers && <div className="notice notice-warning">Использованы синтетические ответы для демонстрации. Замените их реальными сведениями перед подтверждением.</div>}
@@ -180,7 +181,7 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
         {stage === 3 && <section className="panel stack">
           <div><span className="eyebrow">ШАГ 04</span><h2>Проверьте перед публикацией</h2><p className="muted">{task.title || 'Задача пока без названия'}</p></div>
           <div className="confirmation-score"><strong>{rating.total}<small>/100</small></strong><ReadinessBadge score={rating.total} /></div>
-          <p>Рейтинг показывает, насколько подробно описана задача. Низкий балл не мешает публикации: команда сможет уточнить детали в отклике.</p>
+          <p>В рейтинг входят подтверждённые сведения. После подтверждения текущих полей оценка составит {rating.potentialTotal}/100. Низкий балл не мешает публикации: команда сможет уточнить детали в отклике.</p>
           {exampleAnswers && <div className="notice notice-warning">Вы добавили демонстрационные ответы. Подтверждая карточку, вы подтверждаете и эти сведения.</div>}
           {task.confirmed ? <div className="notice"><strong>Карточка подтверждена бизнесом.</strong><p>Теперь её можно опубликовать в каталоге.</p></div> : <><label className="consent-field"><input type="checkbox" checked={consent} disabled={activeRole !== 'business'} onChange={(event) => setConsent(event.target.checked)} /><span>Я подтверждаю корректность информации в карточке</span></label><Button disabled={!consent || activeRole !== 'business'} onClick={confirm}>Подтвердить карточку</Button></>}
           <div className="button-row"><Button disabled={!task.confirmed || activeRole !== 'business'} onClick={() => setStage(4)}>Перейти к публикации →</Button><Button variant="ghost" onClick={() => openEditor()}>Редактировать карточку</Button></div>

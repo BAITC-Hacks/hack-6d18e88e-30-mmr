@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "node scripts/start.mjs",
+    "test:start": "node tests/smoke_launcher.mjs",
     "check": "node tests/run_checks.mjs",
     "test": "npm --prefix frontend test"
   }

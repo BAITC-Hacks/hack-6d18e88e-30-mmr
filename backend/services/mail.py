@@ -157,5 +157,5 @@ async def mail_worker(settings: Settings, stop: asyncio.Event):
             logger.error("Mail worker iteration failed; retrying on next tick")
         try:
             await asyncio.wait_for(stop.wait(), timeout=5)
-        except TimeoutError:
+        except asyncio.TimeoutError:
             pass

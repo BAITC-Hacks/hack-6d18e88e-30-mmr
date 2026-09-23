@@ -8,7 +8,7 @@ import type { Task } from '../frontend/src/types/task';
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new Error('Offline demo'); };
 try {
-  useAppStore.getState().resetDemo();
+  useAppStore.getState().resetToSeedData();
   const draft = 'Нужен бот для заказов';
   assert.ok((await analyzeDraft(draft)).questions.length >= 3);
   const answers = [
@@ -23,7 +23,7 @@ try {
     ['consultationFormat', 'Созвон по понедельникам, вопросы в чате, обратная связь в течение одного дня.'],
   ].map(([field, answer]) => ({ field, answer, questionId: `q-${field}` }));
   const card = await generateCardFromAnswers({ draft, industry: 'Retail', answers });
-  assert.ok(calculateRating(card as Task).total >= 90, 'Structured answers produce a live readiness score before approval');
+  assert.equal(calculateRating(card as Task).total, 0);
   assert.equal(calculateRating(card as Task).potentialTotal, 100);
   useAppStore.getState().addTask(card as Task);
   const id = card.id!;
@@ -31,7 +31,7 @@ try {
   useAppStore.getState().publishTask(id);
   assert.equal(currentTask().published, false);
   useAppStore.getState().confirmTask(id);
-  assert.equal(currentTask().rating, calculateRating(currentTask()).total);
+  assert.equal(currentTask().rating, 100);
   useAppStore.getState().publishTask(id);
   assert.equal(currentTask().published, true);
 
@@ -47,20 +47,18 @@ try {
   assert.equal(useAppStore.getState().proposals.find(p => p.id === 'flow-proposal')?.status, 'pending');
   assert.equal(useAppStore.getState().teams[0].progressPoints, team.progressPoints);
   useAppStore.getState().setActiveRole('business');
-  useAppStore.getState().selectProposal('flow-proposal');
+  useAppStore.getState().setProposalDecision('flow-proposal', 'selected');
   const milestone = useAppStore.getState().milestones.find(m => m.taskId === id && m.teamId === team.id)!;
   assert.ok(milestone);
   useAppStore.getState().confirmMilestone(milestone.id);
   useAppStore.getState().confirmMilestone(milestone.id);
   assert.equal(useAppStore.getState().teams[0].progressPoints, team.progressPoints + milestone.points);
-  const beforeEdit = currentTask().rating;
-  const dataPoints = calculateRating(currentTask()).data;
   useAppStore.getState().updateTask({ ...currentTask(), availableData: '' });
-  assert.equal(currentTask().rating, beforeEdit - dataPoints);
+  assert.equal(currentTask().rating, 80);
   assert.equal(currentTask().confirmed, false);
   assert.equal(currentTask().published, false);
-  console.log('Offline core flow passed: draft → questions → card → live rating → business confirmation → publish → proposal → manual selection → progress once.');
+  console.log('Offline core flow passed: draft → questions → card → 0/100 to 100/100 → publish → proposal → manual selection → progress once.');
 } finally {
   globalThis.fetch = originalFetch;
-  useAppStore.getState().resetDemo();
+  useAppStore.getState().resetToSeedData();
 }

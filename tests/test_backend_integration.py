@@ -17,9 +17,11 @@ def app_for(tmp_path, **overrides):
 def test_account_session_boundary_does_not_remove_ai_bearer(tmp_path):
     with TestClient(app_for(tmp_path), base_url=ORIGIN, headers={"Origin": ORIGIN}) as client:
         response = client.post("/api/auth/register", json={"email": "integration@example.com", "password": "A strong password 123!", "full_name": "Integration"})
-        assert response.status_code == 202
-        assert client.get("/api/auth/me").json()["detail"] == "Войдите в аккаунт."
-        assert client.get("/api/mail/campaigns/1").json()["detail"] == "Войдите в аккаунт."
+        assert response.status_code == 401
+        gateway = {"X-API-Access-Token": TOKEN}
+        assert client.post("/api/auth/register", headers=gateway, json={"email": "integration@example.com", "password": "A strong password 123!", "full_name": "Integration"}).status_code == 202
+        assert client.get("/api/auth/me", headers=gateway).json()["detail"] == "Войдите в аккаунт."
+        assert client.get("/api/mail/campaigns/1", headers=gateway).json()["detail"] == "Войдите в аккаунт."
         client.cookies.set("ai_sana_session", "not-a-bearer-token")
         assert client.get("/api/ai/inspector").json()["detail"]["code"] == "UNAUTHORIZED"
         assert client.get("/api/ai/inspector", headers={"Authorization": f"Bearer {TOKEN}"}).status_code == 200
@@ -27,17 +29,18 @@ def test_account_session_boundary_does_not_remove_ai_bearer(tmp_path):
             assert client.get(path).json()["detail"]["code"] == "UNAUTHORIZED"
 
 
-def test_only_registered_account_methods_skip_bearer_under_root_path(tmp_path):
+def test_account_methods_keep_gateway_and_session_checks_under_root_path(tmp_path):
     with TestClient(app_for(tmp_path), base_url=ORIGIN, root_path="/gateway") as client:
         response = client.get("/gateway/api/auth/me")
         assert response.status_code == 401
-        assert response.json()["detail"] == "Войдите в аккаунт."
+        assert response.json()["detail"]["code"] == "UNAUTHORIZED"
+        assert client.get("/gateway/api/auth/me", headers={"X-API-Access-Token": TOKEN}).json()["detail"] == "Войдите в аккаунт."
         for path in ("/gateway/api/auth/me/", "/gateway/api/auth/register", "/gateway/api/ai/inspector"):
             assert client.get(path).json()["detail"]["code"] == "UNAUTHORIZED"
 
 
 def test_auth_patch_and_post_keep_strict_json_and_safe_errors(tmp_path):
-    with TestClient(app_for(tmp_path), base_url=ORIGIN) as client:
+    with TestClient(app_for(tmp_path), base_url=ORIGIN, headers={"X-API-Access-Token": TOKEN}) as client:
         headers = {"Content-Type": "application/json", "Origin": ORIGIN}
         invalid = client.post("/api/auth/register", content='{"email":"private-value","email":"other-value"}', headers=headers)
         assert invalid.status_code == 400
@@ -53,7 +56,7 @@ def test_auth_patch_and_post_keep_strict_json_and_safe_errors(tmp_path):
 
 
 def test_cookie_csrf_and_account_cors_are_separate_from_ai_cors(tmp_path):
-    with TestClient(app_for(tmp_path), base_url=ORIGIN) as client:
+    with TestClient(app_for(tmp_path), base_url=ORIGIN, headers={"X-API-Access-Token": TOKEN}) as client:
         client.cookies.set("ai_sana_session", "unknown-session")
         assert client.post("/api/auth/logout").status_code == 403
         assert client.post("/api/auth/logout", headers={"Origin": "https://evil.example"}).status_code == 403
@@ -69,7 +72,7 @@ def test_cookie_csrf_and_account_cors_are_separate_from_ai_cors(tmp_path):
 
 
 def test_account_routes_retain_outer_budget_and_credentialed_errors(tmp_path):
-    with TestClient(app_for(tmp_path, rate_limit_per_client=2), base_url=ORIGIN, headers={"Origin": ORIGIN}) as client:
+    with TestClient(app_for(tmp_path, rate_limit_per_client=2), base_url=ORIGIN, headers={"Origin": ORIGIN, "X-API-Access-Token": TOKEN}) as client:
         assert client.post("/api/auth/register", json={}).status_code == 422
         assert client.post("/api/auth/register", json={}).status_code == 422
         blocked = client.post("/api/auth/register", json={})

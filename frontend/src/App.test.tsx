@@ -4,7 +4,7 @@ import { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { Account, AuthBootstrap } from './types/auth';
 
-const auth = vi.hoisted(() => ({ initialize: vi.fn(), me: vi.fn() }));
+const auth = vi.hoisted(() => ({ initialize: vi.fn(), me: vi.fn(), logout: vi.fn() }));
 vi.mock('./services/authClient', () => ({ authClient: auth }));
 import App from './App';
 import { useAppStore } from './app/store';
@@ -26,10 +26,12 @@ async function render(bootstrap: AuthBootstrap) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.history.replaceState(null, '', '/');
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   window.localStorage.clear();
   useAppStore.getState().resetDemo();
   auth.me.mockResolvedValue(account);
+  auth.logout.mockResolvedValue(undefined);
   host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
 });
 afterEach(async () => {
@@ -73,6 +75,26 @@ describe('account and platform integration', () => {
     await click('Открыть платформу');
     expect(host.querySelector('.app-shell')).toBeNull();
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Сессия завершилась');
+  });
+
+  it.each(['profile button', 'browser navigation'])('clears the cached sidebar identity before logout via %s', async entry => {
+    await render({ account, mode: 'session' });
+    await click('Открыть платформу');
+    expect(host.querySelector('.sidebar-footer')?.textContent).toContain(account.full_name);
+    if (entry === 'profile button') await click('Мой профиль');
+    else await act(async () => {
+      window.history.replaceState(null, '', '/auth');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await click('Выйти из аккаунта');
+    expect(auth.logout).toHaveBeenCalledOnce();
+    expect(host.querySelector('.sana-auth')?.getAttribute('data-mode')).toBe('login');
+    await act(async () => {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(host.querySelector('.sidebar-footer')?.textContent).toContain('Гостевой просмотр');
+    expect(host.querySelector('.sidebar-footer')?.textContent).not.toContain(account.full_name);
   });
 
   it('preserves the recovery form when a recovery callback also has a session', async () => {

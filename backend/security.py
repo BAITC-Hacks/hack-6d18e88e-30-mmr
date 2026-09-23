@@ -9,10 +9,32 @@ from urllib.parse import urlsplit
 
 from starlette._utils import get_route_path
 from starlette.datastructures import MutableHeaders
+from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from settings import Settings, hostname
+
+
+def is_account_api(path: str) -> bool:
+    return any(path == prefix or path.startswith(prefix + '/') for prefix in ('/api/auth', '/api/mail'))
+
+
+class ScopedCORSMiddleware:
+    """Only account routes use browser cookies; AI remains a bearer-only API."""
+
+    def __init__(self, app: ASGIApp, settings: Settings):
+        common = {'allow_origins': list(settings.allowed_origins),
+                  'allow_headers': ['Content-Type', 'Authorization']}
+        self.accounts = CORSMiddleware(app, allow_credentials=True,
+                                       allow_methods=['GET', 'POST', 'PATCH', 'OPTIONS'], **common)
+        self.other = CORSMiddleware(app, allow_credentials=False,
+                                    allow_methods=['GET', 'POST', 'OPTIONS'], **common)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        app = self.accounts if scope['type'] == 'http' and is_account_api(get_route_path(scope)) else self.other
+        await app(scope, receive, send)
 
 
 class RateLimiter:
@@ -84,22 +106,16 @@ def _request_host(values: list[bytes]) -> str | None:
 
 
 class SecurityMiddleware:
-    def __init__(self, app: ASGIApp, settings: Settings, limiter: RateLimiter, bearer_exempt_routes=()):
+    def __init__(self, app: ASGIApp, settings: Settings, limiter: RateLimiter):
         self.app = app
         self.settings = settings
         self.limiter = limiter
-        # Compiled full paths and explicit methods from registered account/mail
-        # routes. Their session/action-token/admin checks replace only bearer auth.
-        self.bearer_exempt_routes = bearer_exempt_routes
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
         path = get_route_path(scope)
-        account_path = any(pattern.fullmatch(path) for pattern, _methods in self.bearer_exempt_routes)
-        account_method = any(pattern.fullmatch(path) and scope["method"] in methods
-                             for pattern, methods in self.bearer_exempt_routes)
 
         async def safe_send(message):
             if message["type"] == "http.response.start":
@@ -107,6 +123,12 @@ class SecurityMiddleware:
                 headers["Cache-Control"] = "no-store"
                 headers["X-Content-Type-Options"] = "nosniff"
                 headers["X-Frame-Options"] = "DENY"
+                headers["Referrer-Policy"] = "no-referrer"
+                if path in {'/account', '/account.js', '/account.css'}:
+                    headers['Content-Security-Policy'] = (
+                        "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+                        "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+                    )
             await send(message)
 
         async def reject(status, code, message, headers=None):
@@ -117,8 +139,8 @@ class SecurityMiddleware:
             if len(request_origins) == 1 and request_origins[0] in self.settings.allowed_origins:
                 error_headers["Access-Control-Allow-Origin"] = request_origins[0]
                 error_headers["Vary"] = "Origin"
-                if account_path:
-                    error_headers["Access-Control-Allow-Credentials"] = "true"
+                if is_account_api(path):
+                    error_headers['Access-Control-Allow-Credentials'] = 'true'
             response = JSONResponse({"detail": {"code": code, "message": message}}, status_code=status, headers=error_headers)
             await response(scope, receive, safe_send)
 
@@ -141,21 +163,35 @@ class SecurityMiddleware:
 
         # Use the router's own root_path handling, including mounted/gateway URLs.
         is_api = path == "/api" or path.startswith("/api/")
+        mutating = scope['method'] in {'POST', 'PATCH', 'PUT', 'DELETE'}
+        local_auth = getattr(self.settings, 'auth_provider', 'local') == 'local'
+        if local_auth and is_api and mutating and Request(scope).cookies.get('ai_sana_session') and not origins:
+            await reject(403, 'CSRF_ORIGIN_REQUIRED', 'Cookie-authenticated changes require a trusted Origin.')
+            return
         is_docs = self.settings.environment != "production" and path.rstrip("/") in {
             "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect",
         }
         preflight = (scope["method"] == "OPTIONS" and bool(origins)
                      and any(key.lower() == b"access-control-request-method" for key, _ in headers))
-        if self.settings.api_access_token and ((is_api and not account_method) or is_docs) and not preflight:
+        if self.settings.api_access_token and (is_api or is_docs) and not preflight:
             authorizations = [value for key, value in headers if key.lower() == b"authorization"]
-            parts = authorizations[0].split(b" ") if len(authorizations) == 1 else []
-            valid = (len(parts) == 2 and parts[0].lower() == b"bearer"
-                     and secrets.compare_digest(parts[1], self.settings.api_access_token.encode("ascii")))
+            gateway_tokens = [value for key, value in headers if key.lower() == b'x-api-access-token']
+            expected_token = self.settings.api_access_token.encode('ascii')
+            if gateway_tokens:
+                # A gateway can preserve the user's Supabase Authorization token
+                # while supplying its own server credential in a separate header.
+                valid = len(gateway_tokens) == 1 and secrets.compare_digest(gateway_tokens[0], expected_token)
+            else:
+                parts = authorizations[0].split(b" ") if len(authorizations) == 1 else []
+                valid = (len(parts) == 2 and parts[0].lower() == b"bearer"
+                         and secrets.compare_digest(parts[1], expected_token))
             if not valid:
-                await reject(401, "UNAUTHORIZED", "A valid bearer token is required.", {"WWW-Authenticate": "Bearer"})
+                await reject(401, "UNAUTHORIZED", "A valid server access token is required.", {"WWW-Authenticate": "Bearer"})
                 return
 
-        if is_api and scope["method"] in {"POST", "PATCH"}:
+        remote_account_read = (getattr(self.settings, 'auth_provider', 'local') == 'supabase'
+                               and is_account_api(path) and scope['method'] == 'GET')
+        if is_api and (mutating or remote_account_read):
             retry_after = self.limiter.check(client)
             if retry_after:
                 await reject(429, "RATE_LIMITED", "Request budget exceeded. Try again later.", {"Retry-After": str(retry_after)})

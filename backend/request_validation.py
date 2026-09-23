@@ -85,11 +85,10 @@ def install_error_handlers(app) -> None:
 
 
 class StrictJSONMiddleware:
-    def __init__(self, app, max_body_bytes: int = 262144, body_timeout: float = 5.0, optional_empty_paths=frozenset()):
+    def __init__(self, app, max_body_bytes: int = 262144, body_timeout: float = 5.0):
         self.app = app
         self.max_body_bytes = max_body_bytes
         self.body_timeout = body_timeout
-        self.optional_empty_paths = optional_empty_paths
 
     async def __call__(self, scope, receive, send):
         if scope['type'] != 'http':
@@ -98,8 +97,9 @@ class StrictJSONMiddleware:
 
         # Match the router's root_path semantics when deployed under a URL prefix.
         path = get_route_path(scope)
-        if scope.get('method') in {'POST', 'PATCH'} and path.startswith('/api/'):
-            optional_empty = path in self.optional_empty_paths
+        if scope.get('method') in {'POST', 'PATCH', 'PUT', 'DELETE'} and path.startswith('/api/'):
+            # Logout has no request model; an empty body is valid for this route only.
+            allow_empty = scope.get('method') == 'POST' and path.rstrip('/') == '/api/auth/logout'
             headers = {}
             for name, value in scope.get('headers', []):
                 name = name.lower()
@@ -115,7 +115,8 @@ class StrictJSONMiddleware:
             parameters = [part.partition('=') for part in content_type[1:]]
             valid_charset = all(name.strip() != 'charset' or value.strip(' "') in ('utf-8', 'utf8')
                                 for name, _separator, value in parameters)
-            if (not json_type and not (optional_empty and not media_type)) or not valid_charset or headers.get(b'content-encoding', 'identity').lower() != 'identity':
+            empty_media_type = allow_empty and not media_type
+            if (not json_type and not empty_media_type) or not valid_charset or headers.get(b'content-encoding', 'identity').lower() != 'identity':
                 await error_response(415, 'UNSUPPORTED_MEDIA_TYPE', 'Используйте несжатый JSON в кодировке UTF-8.')(scope, receive, send)
                 return
 
@@ -169,7 +170,7 @@ class StrictJSONMiddleware:
                 await error_response(415, 'UNSUPPORTED_MEDIA_TYPE', 'Используйте несжатый JSON в кодировке UTF-8.')(scope, receive, send)
                 return
             try:
-                if body or not optional_empty:
+                if body or not allow_empty:
                     _strict_json(body)
             except (ValueError, UnicodeError, RecursionError, OverflowError):
                 await error_response(400, 'INVALID_JSON', 'Некорректный JSON. Проверьте формат запроса.')(scope, receive, send)

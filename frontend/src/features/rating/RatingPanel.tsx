@@ -13,7 +13,7 @@ export function RatingPanel({ task, onImprove }: { task: Task; onImprove?: (fiel
       <ScoreRing score={rating.total} size={130} />
       <div><h2>Готовность задачи</h2><ReadinessBadge score={rating.total} /></div>
     </div>
-    <p className="muted">Оценка полноты карточки. Меняется сразу после редактирования.</p>
+    <p className="muted">Оценка подтверждённых сведений. Потенциал после подтверждения текущих полей: {rating.potentialTotal}/100. При редактировании потенциал пересчитывается сразу.</p>
     <div className="rating-categories">
       {RATING_CATEGORIES.map(({ key, label, max: maximum }) => <div className="rating-category" key={key}>
         <div className="section-heading"><span>{label}</span><strong>{rating[key]}<span className="muted"> / {maximum}</span></strong></div>
