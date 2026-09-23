@@ -85,10 +85,17 @@ document.querySelector('#logout').addEventListener('click', async (event) => {
   catch (error) { tell(error.message, true); }
   finally { event.target.disabled = false; }
 });
-if (linkView) show(linkView);
-else {
-  show('login');
-  api('auth/me', undefined, 'GET').then(profile).catch((error) => {
+async function initializeAccountPage() {
+  show(linkView || 'login');
+  try {
+    const config = await api('auth/config', undefined, 'GET');
+    if (config.provider === 'supabase' && linkView !== 'unsubscribe') {
+      location.replace(config.account_url);
+      return;
+    }
+    if (!linkView) profile(await api('auth/me', undefined, 'GET'));
+  } catch (error) {
     if (error.status !== 401) tell(error.message, true);
-  });
+  }
 }
+void initializeAccountPage();

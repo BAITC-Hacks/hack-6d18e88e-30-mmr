@@ -1,7 +1,7 @@
 export type AccountRole = 'student' | 'business' | 'admin';
 
 export interface Account {
-  id: number;
+  id: string | number;
   email: string;
   full_name: string;
   role: AccountRole;
@@ -17,4 +17,13 @@ export interface Registration {
   newsletter_opt_in?: boolean;
 }
 
-export interface AuthMessage { message: string }
+export interface AuthMessage {
+  message: string;
+  requires_email_confirmation?: boolean;
+}
+
+export interface AuthBootstrap {
+  account: Account | null;
+  mode: 'session' | 'recovery' | 'verified' | 'none';
+  message?: string;
+}

@@ -2,6 +2,7 @@ import asyncio
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
 # The core service imports are historical top-level modules; account modules use
 # package imports. Support both `--app-dir backend main:app` and `backend.main:app`.
@@ -10,7 +11,7 @@ for import_root in (backend_dir.parent, backend_dir):
     if str(import_root) not in sys.path:
         sys.path.insert(0, str(import_root))
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
 
 from api.ai_routes import router as ai_router
@@ -19,6 +20,8 @@ from backend.api.mail_routes import router as mail_router
 from backend.config import Settings, load_settings
 from backend.database import initialize
 from backend.services.mail import mail_worker
+from backend.services.security import current_user
+from backend.schemas.auth import UserResponse
 from backend.settings import Settings as CoreSettings
 from request_validation import StrictJSONMiddleware, install_error_handlers
 from security import RateLimiter, ScopedCORSMiddleware, SecurityMiddleware
@@ -36,7 +39,10 @@ def create_app(settings: CoreSettings | None = None) -> FastAPI:
     async def lifespan(application: FastAPI):
         initialize(settings)
         stop = asyncio.Event()
-        worker = asyncio.create_task(mail_worker(settings, stop)) if settings.mail_worker_enabled else None
+        mail_enabled = settings.mail_worker_enabled and (
+            settings.auth_provider == "local" or bool(settings.supabase_secret_key)
+        )
+        worker = asyncio.create_task(mail_worker(settings, stop)) if mail_enabled else None
         try:
             yield
         finally:
@@ -65,8 +71,17 @@ def create_app(settings: CoreSettings | None = None) -> FastAPI:
     application.add_middleware(ScopedCORSMiddleware, settings=settings)
     application.add_middleware(SecurityMiddleware, settings=settings, limiter=limiter)
     application.include_router(ai_router, prefix="/api")
-    application.include_router(auth_router, prefix="/api")
+    if settings.auth_provider == "local":
+        application.include_router(auth_router, prefix="/api")
+    else:
+        @application.get("/api/auth/me", response_model=UserResponse, tags=["Accounts"])
+        def supabase_me(user=Depends(current_user)):
+            return user
     application.include_router(mail_router, prefix="/api")
+
+    @application.get("/api/auth/config", tags=["Accounts"])
+    def auth_config():
+        return {"provider": settings.auth_provider, "account_url": settings.auth_page_url}
 
     @application.get("/health")
     @application.get("/api/health")
@@ -84,6 +99,12 @@ def create_app(settings: CoreSettings | None = None) -> FastAPI:
     @application.get("/account.css", include_in_schema=False)
     def account_styles():
         return FileResponse(backend_dir / "static/account.css", media_type="text/css")
+
+    @application.get("/email-preview/{template}", include_in_schema=False)
+    def email_preview(template: Literal["confirmation", "recovery"]):
+        # These static samples contain intentionally invalid demo links, never tokens.
+        path = backend_dir.parent / "supabase/email-templates/preview" / f"{template}.html"
+        return FileResponse(path, media_type="text/html")
 
     return application
 

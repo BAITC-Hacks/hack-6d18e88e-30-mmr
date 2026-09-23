@@ -25,6 +25,11 @@ os.environ['MAIL_WORKER_ENABLED'] = 'false'
 os.environ['SMTP_HOST'] = ''
 os.environ['SMTP_USER'] = ''
 os.environ['SMTP_PASSWORD'] = ''
+os.environ['AUTH_PROVIDER'] = 'local'
+os.environ['SUPABASE_URL'] = ''
+os.environ['SUPABASE_PUBLISHABLE_KEY'] = ''
+os.environ['SUPABASE_SECRET_KEY'] = ''
+os.environ.pop('UNSUBSCRIBE_PAGE_URL', None)
 os.environ.pop('AUTH_PAGE_URL', None)
 os.environ.pop('COOKIE_SECURE', None)
 os.environ.pop('CORS_ORIGINS', None)

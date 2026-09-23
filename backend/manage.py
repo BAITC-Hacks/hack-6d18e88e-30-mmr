@@ -21,6 +21,8 @@ def main():
     settings = load_settings()
     initialize(settings)
     if args.command == "make-admin":
+        if settings.auth_provider == "supabase":
+            parser.exit(1, "Use the verified-email administrator SQL in docs/SUPABASE_SETUP.md.\n")
         with connect(settings) as db:
             result = db.execute("UPDATE users SET role = 'admin' WHERE email = ? AND email_verified = 1", (args.email.strip().lower(),))
             if result.rowcount != 1:
@@ -29,9 +31,15 @@ def main():
     elif args.command == "send-pending":
         print(f"Processed: {process_outbox(settings, batch_size=100)}")
     elif args.command == "mail-status":
-        with connect(settings) as db:
-            for row in db.execute("SELECT id, status, attempts, last_error FROM outbox ORDER BY id DESC LIMIT 20"):
-                print(dict(row))
+        if settings.auth_provider == "supabase":
+            from .services.supabase_gateway import api_call
+            for row in api_call(settings, "GET", "/rest/v1/mail_outbox", admin=True,
+                                params={"select": "id,status,attempts,last_error", "order": "id.desc", "limit": "20"}):
+                print(row)
+        else:
+            with connect(settings) as db:
+                for row in db.execute("SELECT id, status, attempts, last_error FROM outbox ORDER BY id DESC LIMIT 20"):
+                    print(dict(row))
     else:
         if settings.mail_backend != "file":
             parser.exit(1, "Preview is available only with MAIL_BACKEND=file.\n")
@@ -39,7 +47,7 @@ def main():
         if not path.is_file():
             parser.exit(1, "Preview not found. Check mail-status or run send-pending.\n")
         message = BytesParser(policy=policy.default).parsebytes(path.read_bytes())
-        print(message.get_content())
+        print(message.get_body(preferencelist=("plain",)).get_content())
 
 
 if __name__ == "__main__":

@@ -27,6 +27,8 @@ def run_smoke(account_data: Path):
            'API_ALLOWED_HOSTS': '127.0.0.1', 'API_ALLOWED_ORIGINS': 'http://localhost:5173',
            'DATABASE_PATH': str(account_data / 'accounts.sqlite3'), 'MAIL_DIRECTORY': str(account_data / 'mail'),
            'MAIL_BACKEND': 'file', 'MAIL_WORKER_ENABLED': 'false', 'SMTP_USER': '', 'SMTP_PASSWORD': '',
+           'AUTH_PROVIDER': 'local', 'SUPABASE_URL': '', 'SUPABASE_PUBLISHABLE_KEY': '', 'SUPABASE_SECRET_KEY': '',
+           'UNSUBSCRIBE_PAGE_URL': f'http://127.0.0.1:{port}/account',
            'SMTP_HOST': '', 'COOKIE_SECURE': 'false', 'AUTH_PAGE_URL': f'http://127.0.0.1:{port}/account',
            'API_RATE_LIMIT_PER_CLIENT': '60', 'API_RATE_LIMIT_GLOBAL': '300', 'API_RATE_LIMIT_WINDOW_SECONDS': '60'}
     process = subprocess.Popen(

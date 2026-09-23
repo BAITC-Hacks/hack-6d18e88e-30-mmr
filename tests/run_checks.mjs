@@ -13,6 +13,7 @@ function run(command, args) {
 }
 run(python, ['-m', 'pytest', 'tests', '-q']);
 run(python, ['tests/smoke_backend.py']);
+run(process.execPath, ['supabase/tests/run-migrations.mjs']);
 if (!process.env.npm_execpath) throw new Error('Run this check with npm run check.');
 for (const step of ['test', 'lint', 'build']) {
   run(process.execPath, [process.env.npm_execpath, '--prefix', 'frontend', 'run', step]);

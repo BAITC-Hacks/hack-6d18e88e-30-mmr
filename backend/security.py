@@ -174,14 +174,23 @@ class SecurityMiddleware:
                      and any(key.lower() == b"access-control-request-method" for key, _ in headers))
         if self.settings.api_access_token and (is_api or is_docs) and not preflight:
             authorizations = [value for key, value in headers if key.lower() == b"authorization"]
-            parts = authorizations[0].split(b" ") if len(authorizations) == 1 else []
-            valid = (len(parts) == 2 and parts[0].lower() == b"bearer"
-                     and secrets.compare_digest(parts[1], self.settings.api_access_token.encode("ascii")))
+            gateway_tokens = [value for key, value in headers if key.lower() == b'x-api-access-token']
+            expected_token = self.settings.api_access_token.encode('ascii')
+            if gateway_tokens:
+                # A gateway can preserve the user's Supabase Authorization token
+                # while supplying its own server credential in a separate header.
+                valid = len(gateway_tokens) == 1 and secrets.compare_digest(gateway_tokens[0], expected_token)
+            else:
+                parts = authorizations[0].split(b" ") if len(authorizations) == 1 else []
+                valid = (len(parts) == 2 and parts[0].lower() == b"bearer"
+                         and secrets.compare_digest(parts[1], expected_token))
             if not valid:
-                await reject(401, "UNAUTHORIZED", "A valid bearer token is required.", {"WWW-Authenticate": "Bearer"})
+                await reject(401, "UNAUTHORIZED", "A valid server access token is required.", {"WWW-Authenticate": "Bearer"})
                 return
 
-        if is_api and mutating:
+        remote_account_read = (getattr(self.settings, 'auth_provider', 'local') == 'supabase'
+                               and is_account_api(path) and scope['method'] == 'GET')
+        if is_api and (mutating or remote_account_read):
             retry_after = self.limiter.check(client)
             if retry_after:
                 await reject(429, "RATE_LIMITED", "Request budget exceeded. Try again later.", {"Retry-After": str(retry_after)})

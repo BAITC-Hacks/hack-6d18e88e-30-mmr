@@ -55,6 +55,7 @@ def initialize(settings: Settings):
                 recipient TEXT NOT NULL,
                 subject TEXT NOT NULL,
                 body TEXT NOT NULL,
+                html_body TEXT NOT NULL DEFAULT '',
                 status TEXT NOT NULL DEFAULT 'pending',
                 attempts INTEGER NOT NULL DEFAULT 0,
                 next_attempt INTEGER NOT NULL DEFAULT 0,
@@ -70,3 +71,6 @@ def initialize(settings: Settings):
             CREATE INDEX IF NOT EXISTS tokens_user ON action_tokens(user_id, purpose);
             CREATE INDEX IF NOT EXISTS mail_pending ON outbox(status, next_attempt);
         """)
+        # Small, additive upgrade for databases created before HTML email support.
+        if "html_body" not in {row["name"] for row in db.execute("PRAGMA table_info(outbox)")}:
+            db.execute("ALTER TABLE outbox ADD COLUMN html_body TEXT NOT NULL DEFAULT ''")

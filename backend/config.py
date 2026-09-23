@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
-from .settings import Settings as CoreSettings
+from .settings import Settings as CoreSettings, hostname
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,9 +35,16 @@ def _boolean(name: str, default: bool | None) -> bool | None:
 
 
 def _account_environment() -> dict:
+    supabase_url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+    supabase_key = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip()
     return {
+        "auth_provider": os.getenv("AUTH_PROVIDER") or ("supabase" if supabase_url or supabase_key else "local"),
+        "supabase_url": supabase_url,
+        "supabase_publishable_key": supabase_key,
+        "supabase_secret_key": os.getenv("SUPABASE_SECRET_KEY", "").strip(),
         "database_path": ROOT / os.getenv("DATABASE_PATH", "backend/data/app.sqlite3"),
         "auth_page_url": os.getenv("AUTH_PAGE_URL", "").rstrip("/"),
+        "unsubscribe_page_url": os.getenv("UNSUBSCRIBE_PAGE_URL", "").rstrip("/"),
         "cookie_secure": _boolean("COOKIE_SECURE", None),
         "session_hours": _integer("SESSION_HOURS", 24),
         "mail_backend": os.getenv("MAIL_BACKEND", "file"),
@@ -51,10 +58,29 @@ def _account_environment() -> dict:
     }
 
 
+def _page_url(name: str, value: str, production: bool) -> str:
+    try:
+        url = urlsplit(value)
+        if (url.scheme not in ({"https"} if production else {"http", "https"})
+                or not url.hostname or url.username is not None or url.password is not None
+                or url.query or url.fragment or any(ord(char) < 33 for char in value)):
+            raise ValueError
+        hostname(url.hostname)
+        _ = url.port
+    except ValueError:
+        raise ValueError(f"{name} must be an HTTP(S) URL without credentials, query or fragment; HTTPS is required in production") from None
+    return value.rstrip("/")
+
+
 @dataclass(frozen=True)
 class Settings(CoreSettings):
+    auth_provider: str = "local"
+    supabase_url: str = ""
+    supabase_publishable_key: str = field(default="", repr=False)
+    supabase_secret_key: str = field(default="", repr=False)
     database_path: Path = ROOT / "backend/data/app.sqlite3"
     auth_page_url: str = ""
+    unsubscribe_page_url: str = ""
     cookie_secure: bool | None = None
     session_hours: int = 24
     mail_backend: str = "file"
@@ -69,6 +95,28 @@ class Settings(CoreSettings):
     def __post_init__(self):
         super().__post_init__()
         production = self.environment == "production"
+        if self.auth_provider not in {"local", "supabase"}:
+            raise ValueError("AUTH_PROVIDER must be local or supabase")
+        if self.auth_provider == "supabase":
+            try:
+                url = urlsplit(self.supabase_url)
+                if (url.scheme != "https" or not url.hostname or url.path not in {"", "/"}
+                        or url.query or url.fragment or url.username is not None or url.password is not None
+                        or any(ord(char) < 33 for char in self.supabase_url)):
+                    raise ValueError
+                hostname(url.hostname)
+                _ = url.port
+            except ValueError:
+                raise ValueError("SUPABASE_URL must be an HTTPS project origin") from None
+            if not self.supabase_publishable_key:
+                raise ValueError("SUPABASE_PUBLISHABLE_KEY is required")
+            if self.supabase_publishable_key.startswith("sb_secret_"):
+                raise ValueError("Use the publishable key, not a secret key, for account requests")
+        for name, value in (("SUPABASE_PUBLISHABLE_KEY", self.supabase_publishable_key),
+                            ("SUPABASE_SECRET_KEY", self.supabase_secret_key)):
+            if value and (len(value) > 16384 or not value.isascii() or any(ord(char) < 33 or ord(char) > 126 for char in value)):
+                raise ValueError(f"{name} must be printable ASCII without whitespace and at most 16384 characters")
+        object.__setattr__(self, "supabase_url", self.supabase_url.rstrip("/"))
         if self.cookie_secure is not None and type(self.cookie_secure) is not bool:
             raise ValueError("COOKIE_SECURE must be a boolean")
         secure = production if self.cookie_secure is None else self.cookie_secure
@@ -76,18 +124,14 @@ class Settings(CoreSettings):
             raise ValueError("Production requires COOKIE_SECURE=true")
         object.__setattr__(self, "cookie_secure", secure)
         auth_url = self.auth_page_url or (
+            (f"{self.allowed_origins[0]}/auth" if production else "http://localhost:5173/auth") if self.auth_provider == "supabase"
+            else (f"{self.allowed_origins[0]}/account" if production else "http://localhost:8000/account")
+        )
+        object.__setattr__(self, "auth_page_url", _page_url("AUTH_PAGE_URL", auth_url, production))
+        unsubscribe_url = self.unsubscribe_page_url or (
             f"{self.allowed_origins[0]}/account" if production else "http://localhost:8000/account"
         )
-        try:
-            url = urlsplit(auth_url)
-            if (url.scheme not in ({"https"} if production else {"http", "https"})
-                    or not url.hostname or url.username is not None or url.password is not None
-                    or url.query or url.fragment or any(ord(char) < 33 for char in auth_url)):
-                raise ValueError
-            _ = url.port
-        except ValueError:
-            raise ValueError("AUTH_PAGE_URL must be an HTTP(S) URL without credentials, query or fragment; HTTPS is required in production") from None
-        object.__setattr__(self, "auth_page_url", auth_url.rstrip("/"))
+        object.__setattr__(self, "unsubscribe_page_url", _page_url("UNSUBSCRIBE_PAGE_URL", unsubscribe_url, production))
         object.__setattr__(self, "database_path", Path(self.database_path))
         object.__setattr__(self, "mail_directory", Path(self.mail_directory))
         if self.mail_backend not in {"file", "smtp"}:

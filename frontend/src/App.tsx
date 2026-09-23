@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useAppStore } from './app/store';
 import { createEmptyTask } from './data/syntheticData';
 import { Icon } from './components/Icon';
@@ -14,10 +14,20 @@ import { DemoBar } from './features/demo/DemoBar';
 import { PromptInspector } from './features/prompt-inspector/PromptInspector';
 import './styles/shell.css';
 
+const AuthPage = lazy(() => import('./features/auth/AuthPage'));
+
+function isAccountLocation() {
+  const url = new URL(window.location.href);
+  if (['/auth', '/auth/', '/auth/callback', '/auth/reset-password', '/account'].includes(url.pathname)) return true;
+  const hash = new URLSearchParams(url.hash.slice(1));
+  return ['verify', 'reset', 'token_hash', 'code', 'access_token', 'refresh_token', 'error', 'error_code']
+    .some(key => url.searchParams.has(key) || hash.has(key));
+}
+
 type Page = ReturnType<typeof useAppStore.getState>['page'];
 const businessNav: [Page,string,string][] = [['overview','Обзор','grid'],['builder','Создать задачу','plus'],['tasks','Мои задачи','folder'],['proposals','Отклики','chat']];
 const studentNav: [Page,string,string][] = [['catalog','Каталог задач','grid'],['recommendations','Рекомендации','spark'],['my-proposals','Мои отклики','chat'],['team','Моя команда','users']];
-function Application() {
+function Application({ onAccount }: { onAccount: () => void }) {
   const s = useAppStore();
   function navigate(page: Page) {
     s.setDemoStep(0);
@@ -46,7 +56,7 @@ function Application() {
       <div className="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
       <nav aria-label="Основная навигация">{nav.map(([page,title,icon])=><button key={page} className={`nav-item ${s.page===page ? 'active':''}`} aria-current={s.page===page?'page':undefined} onClick={()=>navigate(page)}><Icon name={icon} size={19}/><span>{title}</span>{page==='proposals' && <span className="nav-count">{s.proposals.filter(p=>p.status==='pending').length}</span>}</button>)}</nav>
       <div className="nav-divider"/>
-      <nav aria-label="Инструменты"><button className={`nav-item ${s.page==='inspector'?'active':''}`} onClick={()=>navigate('inspector')}><Icon name="code" size={19}/><span>AI Inspector</span></button><button className="nav-item" aria-pressed={s.demoEnabled} onClick={()=>s.setDemoEnabled(!s.demoEnabled)}><Icon name="play" size={19}/><span>Demo Mode</span><span className={`toggle-dot ${s.demoEnabled?'on':''}`}/></button></nav>
+      <nav aria-label="Инструменты"><button className="nav-item" onClick={onAccount}><Icon name="users" size={19}/><span>Аккаунт</span></button><button className={`nav-item ${s.page==='inspector'?'active':''}`} onClick={()=>navigate('inspector')}><Icon name="code" size={19}/><span>AI Inspector</span></button><button className="nav-item" aria-pressed={s.demoEnabled} onClick={()=>s.setDemoEnabled(!s.demoEnabled)}><Icon name="play" size={19}/><span>Demo Mode</span><span className={`toggle-dot ${s.demoEnabled?'on':''}`}/></button></nav>
       <div className="sidebar-note"><Icon name="leaf" size={25}/><h3>Идеи становятся делом.</h3><p>Бизнес ставит задачу.<br/>Команды создают решение.</p><span>HACKALEM · AI SANA</span></div>
       <div className="sidebar-footer"><span className="avatar">{s.activeRole==='business'?'Б':'С'}</span><div><strong>{s.activeRole==='business'?'Бизнес-пространство':'Студенческая команда'}</strong><small>Демонстрационный профиль</small></div></div>
     </aside>
@@ -61,4 +71,22 @@ class AppBoundary extends Component<{children:ReactNode},{failed:boolean}> {
   static getDerivedStateFromError() {return {failed:true};}
   render() { return this.state.failed ? <main className="panel" style={{margin:'10vh auto',maxWidth:600}}><h1>Не удалось открыть экран</h1><p>Перезагрузите приложение. Сохранённые задачи останутся в этом браузере.</p><Button onClick={()=>window.location.reload()}>Перезагрузить</Button></main> : this.props.children; }
 }
-export default function App() { return <AppBoundary><Application/></AppBoundary>; }
+export default function App() {
+  const [accountVisible, setAccountVisible] = useState(isAccountLocation);
+  useEffect(() => {
+    const onLocationChange = () => setAccountVisible(isAccountLocation());
+    window.addEventListener('popstate', onLocationChange);
+    window.addEventListener('hashchange', onLocationChange);
+    return () => {
+      window.removeEventListener('popstate', onLocationChange);
+      window.removeEventListener('hashchange', onLocationChange);
+    };
+  }, []);
+  function openAccount(visible: boolean) {
+    window.history.pushState(window.history.state, '', visible ? '/auth' : '/');
+    setAccountVisible(visible);
+  }
+  return <AppBoundary>{accountVisible
+    ? <Suspense fallback={<main className="panel" role="status"><p>Открываем аккаунт…</p><Button onClick={() => openAccount(false)}>Открыть демо</Button></main>}><AuthPage onDemo={() => openAccount(false)} /></Suspense>
+    : <Application onAccount={() => openAccount(true)} />}</AppBoundary>;
+}

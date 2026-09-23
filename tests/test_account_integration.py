@@ -83,6 +83,15 @@ def test_account_patch_consumes_outer_request_budget(settings):
         assert int(response.headers['retry-after']) > 0
 
 
+@pytest.mark.parametrize('headers', [
+    [('X-API-Access-Token', TOKEN), ('X-API-Access-Token', TOKEN)],
+    [('X-API-Access-Token', 'wrong'), ('Authorization', 'Bearer ' + TOKEN)],
+])
+def test_gateway_token_headers_cannot_be_ambiguous_or_fall_back(settings, headers):
+    with TestClient(create_app(replace(settings, api_access_token=TOKEN)), base_url=ORIGIN) as client:
+        assert client.get('/api/ai/inspector', headers=headers).status_code == 401
+
+
 def test_production_account_settings_require_secure_cookies_and_links(tmp_path):
     options = dict(environment='production', api_access_token=TOKEN,
                    allowed_hosts=('api.example.test',), allowed_origins=('https://app.example.test',),

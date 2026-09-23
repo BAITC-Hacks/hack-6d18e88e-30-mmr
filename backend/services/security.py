@@ -56,6 +56,9 @@ def rate_limit(request: Request, action: str, email: str | None = None, limit: i
 
 
 def current_user(request: Request):
+    if request.app.state.settings.auth_provider == "supabase":
+        from .supabase_gateway import verified_user
+        return verified_user(request)
     token = request.cookies.get(COOKIE_NAME, "")
     with connect(request.app.state.settings) as db:
         row = db.execute("""SELECT users.* FROM users JOIN sessions ON sessions.user_id = users.id
