@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "test": "node ../tests/run_frontend_tests.mjs",
-    "preview": "vite preview"
+    "lint": "oxlint src tests",
+    "preview": "vite preview",
+    "test": "node ../tests/run_frontend_tests.mjs && node --import ./tests/loader.mjs --test tests/*.test.ts tests/*.test.tsx"
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -21,6 +21,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "29.0.0",
     "oxlint": "^1.81.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.2",

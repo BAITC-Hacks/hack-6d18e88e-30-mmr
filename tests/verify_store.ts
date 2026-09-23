@@ -81,6 +81,8 @@ async function verify() {
   state().addProposal(makeProposal('orphan-task', 'missing-task'));
   state().addProposal(makeProposal('orphan-team', 'task-5', 'missing-team'));
   state().addTask({ ...structuredClone(seedTasks[0]), id: 'private-draft' });
+  state().setActiveRole('student');
+  state().setActiveTeam('team-5');
   state().addProposal(makeProposal('private-proposal', 'private-draft'));
   assert.equal(state().proposals.length, proposalCount);
   assert.ok(task('task-5').rating < 40);
@@ -88,14 +90,17 @@ async function verify() {
   state().addProposal(makeProposal('low-rating'));
   assert.equal(state().proposals.length, proposalCount + 1, 'low rating is no barrier; duplicate IDs are rejected');
   assert.equal(proposal('low-rating').status, 'pending', 'a submitted proposal never chooses itself');
+  state().setActiveTeam('team-1');
   state().addProposal(makeProposal('second-team', 'task-5', 'team-1'));
+  state().setActiveTeam('team-5');
   state().addProposal(makeProposal('another-idea', 'task-5', 'team-5'));
+  state().setActiveRole('business');
   state().setProposalDecision('low-rating', 'selected');
   state().setProposalDecision('second-team', 'selected');
   state().setProposalDecision('another-idea', 'selected');
   state().setProposalDecision('second-team', 'selected');
   assert.equal(state().proposals.filter((item) => item.taskId === 'task-5' && item.status === 'selected').length, 3);
-  assert.equal(state().milestones.filter((item) => item.taskId === 'task-5').length, 2, 'multiple teams allowed, one starter milestone per team/task');
+  assert.equal(state().milestones.filter((item) => item.taskId === 'task-5').length, 8, 'multiple teams allowed, one four-stage project per team/task');
   assert.equal(new Set(state().milestones.map((item) => item.id)).size, state().milestones.length);
   console.log('PASS: open low-rating proposals, multiple selected teams, stable milestone IDs');
 

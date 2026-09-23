@@ -1,11 +1,19 @@
-import { z } from 'zod';
-import type { PersistStorage } from 'zustand/middleware';
+﻿import { z } from 'zod';
+import type { PersistStorage, StateStorage } from 'zustand/middleware';
 import type { Task } from '../types/task';
 import type { Team } from '../types/team';
 import type { Proposal } from '../types/proposal';
 import type { Milestone } from '../types/milestone';
 import { calculateRating, getReadinessLevel } from '../services/ratingService';
+import { seedTeams } from '../data/syntheticData';
+import { MILESTONE_TEMPLATES } from './constants';
 
+export const STORAGE_KEY = 'ai-sana-taskrank-v1';
+export const STORAGE_VERSION = 2;
+const LEGACY_UI_KEY = 'ai-sana-demo';
+export const pages = ['overview', 'builder', 'tasks', 'proposals', 'catalog', 'recommendations', 'my-proposals', 'team', 'inspector'] as const;
+export type AppPage = typeof pages[number];
+export interface ActivityEvent { id: string; title: string; detail?: string; createdAt: string }
 export interface StoredAppState {
   tasks: Task[];
   teams: Team[];
@@ -14,79 +22,86 @@ export interface StoredAppState {
   activeRole: 'business' | 'student';
   activeTeamId: string | null;
   activeTaskId: string | null;
+  page: AppPage;
+  demoEnabled: boolean;
+  demoStep: number;
+  events: ActivityEvent[];
 }
+export type PersistedAppState = StoredAppState;
+export const businessPages: readonly AppPage[] = ['overview', 'builder', 'tasks', 'proposals', 'catalog', 'inspector'];
+export const studentPages: readonly AppPage[] = ['catalog', 'recommendations', 'my-proposals', 'team', 'inspector'];
 
-const id = z.string().refine((value) => value.trim().length > 0);
+const id = z.string().refine(value => value.trim().length > 0);
 const strings = z.array(z.string());
 const points = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
-
 export const taskSchema = z.object({
-  id, title: z.string(), industry: z.string(), tags: strings,
-  context: z.string(), need: z.string(), targetUsers: z.string(),
-  availableData: z.string(), constraints: z.string(), expectedResult: z.string(),
-  successCriteria: z.string(), contact: z.string(), consultationFormat: z.string(),
-  confirmedFields: strings, rating: z.number(),
-  readinessLevel: z.enum(['draft', 'working', 'ready', 'priority']),
-  confirmed: z.boolean(), published: z.boolean(),
-  createdAt: z.string(), updatedAt: z.string(),
+  id, rawDraft: z.string().optional(), fieldSources: z.record(z.string(), z.enum(['draft', 'clarification', 'manual'])).optional(),
+  title: z.string(), industry: z.string(), tags: strings,
+  context: z.string(), need: z.string(), targetUsers: z.string(), availableData: z.string(),
+  constraints: z.string(), expectedResult: z.string(), successCriteria: z.string(), contact: z.string(), consultationFormat: z.string(),
+  confirmedFields: strings, rating: z.number(), readinessLevel: z.enum(['draft', 'working', 'ready', 'priority']),
+  confirmed: z.boolean(), published: z.boolean(), createdAt: z.string(), updatedAt: z.string(),
 });
-
 const teamSchema = z.object({
   id, name: z.string(), description: z.string(), skills: strings,
   technologies: strings, interests: strings, industries: strings, progressPoints: points,
 });
-
 export const proposalStatusSchema = z.enum(['pending', 'selected', 'rejected']);
 export const proposalSchema = z.object({
-  id, taskId: id, teamId: id, idea: z.string(), implementationPlan: z.string(),
-  estimatedTime: z.string(), prototypeUrl: z.string(),
-  status: proposalStatusSchema, createdAt: z.string(),
+  id, taskId: id, teamId: id, idea: z.string(), implementationPlan: z.string(), estimatedTime: z.string(),
+  prototypeUrl: z.string(), status: proposalStatusSchema, createdAt: z.string(),
 });
-
 export const milestoneSchema = z.object({
   id, taskId: id, teamId: id, title: z.string(), description: z.string(),
   status: z.enum(['pending', 'completed']), points, confirmedAt: z.string().optional(),
 });
-
+const eventSchema = z.object({ id, title: z.string(), detail: z.string().optional(), createdAt: z.string() });
+const stateSchema = z.object({
+  tasks: z.array(taskSchema), teams: z.array(teamSchema), proposals: z.array(proposalSchema), milestones: z.array(milestoneSchema),
+  activeRole: z.enum(['business', 'student']), activeTeamId: id.nullable(), activeTaskId: id.nullable(),
+  page: z.enum(pages).default('overview'), demoEnabled: z.boolean().default(true),
+  demoStep: z.number().int().min(0).max(8).default(0), events: z.array(eventSchema).default([]),
+});
 export const confirmableFields = [
   'title', 'context', 'need', 'targetUsers', 'availableData', 'constraints',
   'expectedResult', 'successCriteria', 'contact', 'consultationFormat',
 ] as const satisfies readonly (keyof Task)[];
 
+export function isSafePrototypeUrl(value: string): boolean {
+  if (!value.trim()) return true;
+  try {
+    const url = new URL(value.trim());
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;
+  } catch { return false; }
+}
+
 export function rateTask(task: Task): Task {
-  const confirmedFields = confirmableFields.filter(
-    (field) => task.confirmedFields.includes(field) && task[field].trim().length > 0,
-  );
-  const normalized = { ...task, tags: [...task.tags], confirmedFields };
+  const confirmedFields = confirmableFields.filter(field => task.confirmedFields.includes(field) && task[field].trim().length > 0);
+  const normalized = { ...task, tags: [...task.tags], confirmedFields,
+    ...(task.fieldSources ? { fieldSources: { ...task.fieldSources } } : {}),
+  };
   const { total } = calculateRating(normalized);
   return { ...normalized, rating: total, readinessLevel: getReadinessLevel(total) };
 }
 
-/** Selected teams get a demo milestone; completed history prevents recreating it. */
+/** Existing project history is retained, including the original single 50-point milestone. */
 export function ensureStarterMilestones(proposals: Proposal[], milestones: Milestone[]): Milestone[] {
   const result = [...milestones];
   for (const proposal of proposals) {
-    if (proposal.status !== 'selected' || result.some(
-      (milestone) => milestone.taskId === proposal.taskId && milestone.teamId === proposal.teamId,
-    )) continue;
-    const baseId = `ms-${proposal.id}`;
-    let milestoneId = baseId;
-    let suffix = 1;
-    while (result.some((milestone) => milestone.id === milestoneId)) {
-      milestoneId = `${baseId}-${suffix++}`;
+    if (proposal.status !== 'selected' || result.some(item => item.taskId === proposal.taskId && item.teamId === proposal.teamId)) continue;
+    for (const [index, template] of MILESTONE_TEMPLATES.entries()) {
+      const baseId = `ms-${proposal.id}-${index}`;
+      let milestoneId = baseId;
+      let suffix = 1;
+      while (result.some(item => item.id === milestoneId)) milestoneId = `${baseId}-${suffix++}`;
+      result.push({ ...template, id: milestoneId, taskId: proposal.taskId, teamId: proposal.teamId, status: 'pending' });
     }
-    result.push({
-      id: milestoneId, taskId: proposal.taskId, teamId: proposal.teamId,
-      title: 'Этап 1: Архитектура решения и MVP прототип',
-      description: 'Согласование спецификации и первая демонстрация прототипа заказчику',
-      status: 'pending', points: 50,
-    });
   }
   return result;
 }
 
 function validUniqueItems<T extends { id: string }>(value: unknown, schema: z.ZodType<T>, fallback: T[]): T[] {
-  if (!Array.isArray(value)) return fallback;
+  if (!Array.isArray(value)) return structuredClone(fallback);
   const seen = new Set<string>();
   const result: T[] = [];
   for (const item of value) {
@@ -98,49 +113,101 @@ function validUniqueItems<T extends { id: string }>(value: unknown, schema: z.Zo
   return result;
 }
 
-/** Only data is restored: persisted keys can never replace store actions. */
-export function restoreState(value: unknown, fallback: StoredAppState): StoredAppState {
+/** Salvage valid records; never spread persisted keys over live store actions. */
+export function restoreState(value: unknown, fallback: StoredAppState, addMissingSeeds = false): StoredAppState {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
   const data = value as Record<string, unknown>;
-  const tasks = validUniqueItems(data.tasks, taskSchema, fallback.tasks).map((task) =>
-    rateTask({ ...task, published: task.published && task.confirmed }),
-  );
+  const tasks = validUniqueItems(data.tasks, taskSchema, fallback.tasks).map(task => rateTask({ ...task, published: task.published && task.confirmed }));
   const teams = validUniqueItems(data.teams, teamSchema, fallback.teams);
-  const taskIds = new Set(tasks.map((task) => task.id));
-  const teamIds = new Set(teams.map((team) => team.id));
-  const hasReferences = (item: { taskId: string; teamId: string }) =>
-    taskIds.has(item.taskId) && teamIds.has(item.teamId);
-  const proposals = validUniqueItems(data.proposals, proposalSchema, fallback.proposals).filter(hasReferences);
-  const milestones = ensureStarterMilestones(proposals,
-    validUniqueItems(data.milestones, milestoneSchema, fallback.milestones).filter(hasReferences),
+  const proposals = validUniqueItems(data.proposals, proposalSchema, fallback.proposals);
+  if (addMissingSeeds) {
+    for (const task of fallback.tasks) if (!tasks.some(item => item.id === task.id)) tasks.push(rateTask(task));
+    for (const team of fallback.teams) if (!teams.some(item => item.id === team.id)) teams.push(structuredClone(team));
+    for (const proposal of fallback.proposals) if (!proposals.some(item => item.id === proposal.id)) proposals.push({ ...proposal });
+  }
+  const taskIds = new Set(tasks.map(task => task.id));
+  const teamIds = new Set(teams.map(team => team.id));
+  const hasReferences = (item: { taskId: string; teamId: string }) => taskIds.has(item.taskId) && teamIds.has(item.teamId);
+  const validProposals = proposals.filter(item => hasReferences(item) && isSafePrototypeUrl(item.prototypeUrl));
+  const milestones = ensureStarterMilestones(validProposals,
+    validUniqueItems(data.milestones, milestoneSchema, fallback.milestones).filter(item => hasReferences(item)
+      && (item.status !== 'completed' || Boolean(item.confirmedAt))),
   );
+  // Seed points describe historical progress outside this demo. Add only the
+  // current completed ledger, preserving both branches without trusting stale totals.
+  for (const team of teams) {
+    const baseline = seedTeams.find(seed => seed.id === team.id)?.progressPoints ?? 0;
+    const total = milestones.filter(item => item.teamId === team.id && item.status === 'completed').reduce((sum, item) => sum + item.points, baseline);
+    team.progressPoints = Number.isSafeInteger(total) ? total : baseline;
+  }
+  const activeRole = data.activeRole === 'business' || data.activeRole === 'student' ? data.activeRole : fallback.activeRole;
+  const allowed = activeRole === 'business' ? businessPages : studentPages;
+  const selectedTask = data.activeTaskId === null ? null :
+    typeof data.activeTaskId === 'string' && taskIds.has(data.activeTaskId) ? data.activeTaskId : tasks[0]?.id ?? null;
   return {
-    tasks, teams, proposals, milestones,
-    activeRole: data.activeRole === 'business' || data.activeRole === 'student' ? data.activeRole : fallback.activeRole,
+    tasks, teams, proposals: validProposals, milestones, activeRole,
     activeTeamId: data.activeTeamId === null ? null :
       typeof data.activeTeamId === 'string' && teamIds.has(data.activeTeamId) ? data.activeTeamId : teams[0]?.id ?? null,
-    activeTaskId: data.activeTaskId === null ? null :
-      typeof data.activeTaskId === 'string' && taskIds.has(data.activeTaskId) ? data.activeTaskId : tasks[0]?.id ?? null,
+    activeTaskId: activeRole === 'student' && !tasks.find(task => task.id === selectedTask)?.published ? null : selectedTask,
+    page: allowed.includes(data.page as AppPage) ? data.page as AppPage : activeRole === 'business' ? 'overview' : 'catalog',
+    demoEnabled: typeof data.demoEnabled === 'boolean' ? data.demoEnabled : fallback.demoEnabled,
+    demoStep: typeof data.demoStep === 'number' && Number.isFinite(data.demoStep) ? Math.max(0, Math.min(8, Math.trunc(data.demoStep))) : fallback.demoStep,
+    events: validUniqueItems(data.events, eventSchema, fallback.events).slice(0, 80),
   };
 }
 
-/** Private browsing, quota errors and malformed JSON must not break the demo. */
-export const safeStorage: PersistStorage<StoredAppState> = {
+export function validateStoredState(value: unknown): StoredAppState | null {
+  const parsed = stateSchema.safeParse(value);
+  if (!parsed.success) return null;
+  const state = parsed.data;
+  if (![state.tasks, state.teams, state.proposals, state.milestones, state.events].every(items => new Set(items.map(item => item.id)).size === items.length)) return null;
+  const taskIds = new Set(state.tasks.map(task => task.id));
+  const teamIds = new Set(state.teams.map(team => team.id));
+  if (state.activeTeamId && !teamIds.has(state.activeTeamId)) return null;
+  if (state.activeTaskId && !taskIds.has(state.activeTaskId)) return null;
+  if (state.tasks.some(task => task.published && !task.confirmed)) return null;
+  if (state.proposals.some(item => !taskIds.has(item.taskId) || !teamIds.has(item.teamId) || !isSafePrototypeUrl(item.prototypeUrl))) return null;
+  if (state.milestones.some(item => !taskIds.has(item.taskId) || !teamIds.has(item.teamId) || (item.status === 'completed' && !item.confirmedAt))) return null;
+  return restoreState(state, state);
+}
+
+let lastStorageError: string | null = null;
+export const getStorageError = () => lastStorageError;
+export const clearStorageError = () => { lastStorageError = null; };
+
+export const safeLocalStorage: StateStorage = {
   getItem(name) {
     try {
+      if (typeof globalThis.localStorage === 'undefined') return null;
       const raw = globalThis.localStorage.getItem(name);
       if (!raw) return null;
-      const value: unknown = JSON.parse(raw);
-      if (!value || typeof value !== 'object' || Array.isArray(value) || !('state' in value)) return null;
-      return value as { state: StoredAppState; version?: number };
+      const envelope: unknown = JSON.parse(raw);
+      if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope) || !('state' in envelope)) throw new Error('Invalid save');
+      const version = 'version' in envelope ? envelope.version : 0;
+      if (typeof version !== 'number' || ![0, 1, STORAGE_VERSION].includes(version)) throw new Error('Unsupported save version');
+      return raw;
     } catch {
+      lastStorageError = 'Не удалось прочитать сохранение. Приложение продолжает работать с доступными данными.';
       return null;
     }
   },
   setItem(name, value) {
-    try { globalThis.localStorage.setItem(name, JSON.stringify(value)); } catch { /* Keep the working in-memory state. */ }
+    try { if (typeof globalThis.localStorage !== 'undefined') globalThis.localStorage.setItem(name, value); }
+    catch { lastStorageError = 'Браузер не разрешает сохранение. Изменения доступны до перезагрузки страницы.'; }
   },
   removeItem(name) {
-    try { globalThis.localStorage.removeItem(name); } catch { /* Storage may be unavailable. */ }
+    try { if (typeof globalThis.localStorage !== 'undefined') globalThis.localStorage.removeItem(name); }
+    catch { lastStorageError = 'Браузер не разрешает очистить сохранение.'; }
   },
+};
+
+export const safeStorage: PersistStorage<StoredAppState> = {
+  getItem(name) {
+    const raw = safeLocalStorage.getItem(name) ?? (name === STORAGE_KEY ? safeLocalStorage.getItem(LEGACY_UI_KEY) : null);
+    if (typeof raw !== 'string') return null;
+    const envelope = JSON.parse(raw) as { state: StoredAppState; version?: number };
+    return { state: envelope.state, version: envelope.version ?? 0 };
+  },
+  setItem(name, value) { safeLocalStorage.setItem(name, JSON.stringify(value)); },
+  removeItem(name) { safeLocalStorage.removeItem(name); },
 };

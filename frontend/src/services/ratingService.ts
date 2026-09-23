@@ -1,4 +1,4 @@
-﻿import type { Task, ReadinessLevel } from '../types/task';
+import type { Task, ReadinessLevel } from '../types/task';
 import type { RatingBreakdown, RatingRecommendation } from '../types/rating';
 
 type RatingField = 'context' | 'need' | 'availableData' | 'expectedResult'
@@ -27,6 +27,7 @@ const criteria: {
 function evaluateFieldQuality(value: string, minChars: number): number {
   const cleaned = value.trim().replace(/\s+/g, ' ');
   const marker = cleaned.toLowerCase().replace(/ё/g, 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  if (/^(?:нет|позже|уточняется|тест|test)$/u.test(marker)) return 0;
   if (!marker || /^(?:не указан[оыа]?|не определен[оыа]?|не заполнен[оыа]?|неизвестно|нет данных|не знаю|требует уточнения|требуют уточнения|требуется уточнение|нужно уточнить|уточнить|будет уточнено|пока неизвестно|unknown|not specified|not provided|to be determined|tbd|todo|n a)(?:\s|$)/u.test(marker)) {
     return 0;
   }

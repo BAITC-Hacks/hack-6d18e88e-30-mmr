@@ -1,4 +1,4 @@
-﻿import type { Task } from '../types/task';
+import type { Task } from '../types/task';
 import type { Team } from '../types/team';
 
 export interface TeamMatchResult {
@@ -8,6 +8,10 @@ export interface TeamMatchResult {
   interests: number;
   industry: number;
   matchedTags: string[];
+  /** UI-compatible alias of the actual matched profile labels. */
+  matching: string[];
+  /** Explicit task tags/industry absent from the team's stated capabilities. */
+  missing: string[];
 }
 
 /** Keep word boundaries and C++/C#; normalize both the task and profile labels. */
@@ -68,7 +72,17 @@ export function calculateTeamMatch(task: Task, team: Team): TeamMatchResult {
   }
 
   const total = Math.round(technologies * 0.35 + skills * 0.25 + interests * 0.20 + industry * 0.20);
-  return { total, technologies, skills, interests, industry, matchedTags: [...matched.values()] };
+  const capabilities = uniqueLabels([...team.technologies, ...team.skills, ...team.interests, ...team.industries]);
+  const missing = uniqueLabels(task.tags.filter(tag => !capabilities.has(normalize(tag))));
+  if (industry) missing.delete(taskIndustry);
+  if (taskIndustry && !industry && !capabilities.has(taskIndustry)) {
+    missing.set(taskIndustry, task.industry.trim());
+  }
+  const matchedTags = [...matched.values()];
+  return {
+    total, technologies, skills, interests, industry, matchedTags,
+    matching: [...matchedTags], missing: [...missing.values()],
+  };
 }
 
 /** Returns every published task, including low readiness and low relevance. */

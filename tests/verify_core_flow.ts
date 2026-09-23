@@ -37,6 +37,8 @@ try {
 
   const team = useAppStore.getState().teams[0];
   assert.ok(getRecommendedTasksForTeam(team, useAppStore.getState().tasks).some(item => item.task.id === id));
+  useAppStore.getState().setActiveRole('student');
+  useAppStore.getState().setActiveTeam(team.id);
   useAppStore.getState().addProposal({
     id: 'flow-proposal', taskId: id, teamId: team.id, idea: 'Бот для каталога и заказов',
     implementationPlan: 'Каталог, оформление, тестовые заказы', estimatedTime: '2 недели',
@@ -44,6 +46,7 @@ try {
   });
   assert.equal(useAppStore.getState().proposals.find(p => p.id === 'flow-proposal')?.status, 'pending');
   assert.equal(useAppStore.getState().teams[0].progressPoints, team.progressPoints);
+  useAppStore.getState().setActiveRole('business');
   useAppStore.getState().setProposalDecision('flow-proposal', 'selected');
   const milestone = useAppStore.getState().milestones.find(m => m.taskId === id && m.teamId === team.id)!;
   assert.ok(milestone);

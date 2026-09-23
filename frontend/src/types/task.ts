@@ -2,6 +2,8 @@ export type ReadinessLevel = | 'draft' | 'working' | 'ready' | 'priority';
 
 export interface Task {
   id: string;
+  rawDraft?: string;
+  fieldSources?: Partial<Record<string, 'draft' | 'clarification' | 'manual'>>;
   title: string;
   industry: string;
   tags: string[];
