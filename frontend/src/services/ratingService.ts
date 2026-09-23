@@ -1,5 +1,6 @@
 import type { ReadinessLevel, Task } from '../types/task';
 import type { RatingBreakdown, RatingRecommendation } from '../types/rating';
+import { TASK_FIELDS } from '../app/constants';
 
 const emptyAnswer = /^(?:нет|не знаю|позже|уточняется|test|тест)$/iu;
 const placeholder = /^(?:не указан[оыа]?|не определен[оыа]?|не заполнен[оыа]?|неизвестно|нет данных|требует уточнения|требуют уточнения|требуется уточнение|нужно уточнить|уточнить|будет уточнено|пока неизвестно|unknown|not specified|not provided|to be determined|tbd|todo|n a)(?:\s|$)/u;
@@ -31,7 +32,8 @@ export function getReadinessLevel(score: number): ReadinessLevel {
   return 'draft';
 }
 
-export function calculateRating(task: Task): RatingBreakdown {
+/** Live completeness preview. These points are not awarded until business confirmation. */
+export function calculateRatingPreview(task: Task): RatingBreakdown {
   const context = descriptionScore(task.context, 10);
   const need = descriptionScore(task.need, 10);
   const data = descriptionScore(task.availableData, 10)
@@ -69,4 +71,14 @@ export function calculateRating(task: Task): RatingBreakdown {
     contextNeed, data, expectedResult, successCriteria, constraints, users, businessCommunication,
     total, potentialTotal: total + recommendations.reduce((sum, item) => sum + item.possibleGain, 0), recommendations,
   };
+}
+
+/** Award points only for fields explicitly included in the business confirmation. */
+export function calculateRating(task: Task): RatingBreakdown {
+  const confirmed = new Set(task.confirmed ? task.confirmedFields : []);
+  const approved = { ...task };
+  for (const { key } of TASK_FIELDS) {
+    if (!confirmed.has(key)) approved[key] = '';
+  }
+  return calculateRatingPreview(approved);
 }

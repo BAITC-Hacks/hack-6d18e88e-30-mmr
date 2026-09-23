@@ -44,5 +44,7 @@ def ensure_ai_scope(draft: str, industry: str = "", answers: Iterable[str] = ())
     if any(pattern.search(text) for text in clauses for pattern in OFF_TOPIC_PATTERNS):
         raise ScopeViolation("OFF_TOPIC")
     # Industry and answer keywords cannot turn an unrelated draft into a business task.
-    if not any(pattern.search(normalized[0]) for pattern in TOPIC_PATTERNS):
+    # A draft can name an operational goal without a domain or technical solution.
+    # Preserve clauses so unrelated sentences cannot combine into such a goal.
+    if not any(pattern.search(clauses[0]) for pattern in TOPIC_PATTERNS):
         raise ScopeViolation("OFF_TOPIC")

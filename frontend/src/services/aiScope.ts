@@ -31,8 +31,11 @@ export function assertTaskScope(draft: string, industry = '', answers: string[] 
   if (texts.some(text => injectionPatterns.some(pattern => pattern.test(text)))) {
     throw new AiScopeError('PROMPT_INJECTION');
   }
-  if (input.some(text => offTopicPatterns.some(pattern => pattern.test(normalize(text, true)))) ||
-      !topicPatterns.some(pattern => pattern.test(texts[0]))) {
+  const clauses = input.map(text => normalize(text, true));
+  // A draft may name a domain or an operational goal, without naming its solution.
+  // Keep clause boundaries so unrelated sentences cannot combine into such a goal.
+  if (clauses.some(text => offTopicPatterns.some(pattern => pattern.test(text))) ||
+      !topicPatterns.some(pattern => pattern.test(clauses[0]))) {
     throw new AiScopeError('OFF_TOPIC');
   }
 }

@@ -4,7 +4,7 @@ import { TASK_FIELDS } from '../../app/constants';
 import type { TaskFieldKey } from '../../app/constants';
 import { createEmptyTask, demoAnswers, seedTasks } from '../../data/syntheticData';
 import { analyzeDraft, createClarificationQuestions } from '../../services/aiClient';
-import { calculateRating } from '../../services/ratingService';
+import { calculateRating, calculateRatingPreview } from '../../services/ratingService';
 import type { Task } from '../../types/task';
 import type { AiDraftAnalysis, FieldSource } from '../../types/ai';
 import { Button } from '../../components/Button';
@@ -29,8 +29,10 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
   const task = useAppStore((state) => state.tasks.find((item) => item.id === initialTask.id)) || initialTask;
   const activeRole = useAppStore((state) => state.activeRole);
   const previousSession = sessions.get(task.id);
+  const draft = task.rawDraft || '';
+  const sessionMatchesDraft = previousSession?.rawDraft === draft && previousSession?.industry === task.industry;
   const [stage, setStage] = useState(previousSession?.stage ?? (task.published ? 4 : task.need ? 2 : 0));
-  const [analysis, setAnalysis] = useState<AiDraftAnalysis | null>(previousSession?.analysis ?? null);
+  const [analysis, setAnalysis] = useState<AiDraftAnalysis | null>(sessionMatchesDraft ? previousSession.analysis : null);
   const [exampleAnswers, setExampleAnswers] = useState(previousSession?.exampleAnswers ?? false);
   const [loading, setLoading] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -38,19 +40,33 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
   const controller = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const demoAnalyzed = useRef(false);
-  const draft = task.rawDraft || '';
-  const rating = calculateRating(task);
+  const rating = task.confirmed ? calculateRating(task) : calculateRatingPreview(task);
   const emptyFields = TASK_FIELDS.filter(({ key }) => !task[key].trim()).map(({ key }) => key);
   const questions = analysis?.questions || createClarificationQuestions(emptyFields);
 
   useEffect(() => {
-    sessions.set(task.id, { stage, analysis, exampleAnswers });
-  }, [task.id, stage, analysis, exampleAnswers]);
+    sessions.set(task.id, { stage, analysis, exampleAnswers, rawDraft: draft, industry: task.industry });
+  }, [task.id, stage, analysis, exampleAnswers, draft, task.industry]);
 
   useEffect(() => () => { generation.current += 1; controller.current?.abort(); demoAnalyzed.current = false; }, []);
 
   function save(next: Task) {
     const store = useAppStore.getState();
+    if ((next.rawDraft || '') !== draft || next.industry !== task.industry) {
+      // Extracted facts belong to their source draft. Human corrections and answers
+      // remain editable, but changing the input invalidates every earlier extraction.
+      next = { ...next, fieldSources: { ...next.fieldSources } };
+      for (const { key } of TASK_FIELDS) {
+        if (next.fieldSources?.[key] === 'draft') {
+          next[key] = '';
+          delete next.fieldSources[key];
+        }
+      }
+      generation.current += 1;
+      controller.current?.abort();
+      demoAnalyzed.current = false;
+      setLoading(false); setAnalysis(null); setError('');
+    }
     if (store.tasks.some((item) => item.id === next.id)) store.updateTask(next);
     else { store.addTask(next); store.setActiveTask(next.id); }
     setConsent(false);
@@ -75,13 +91,17 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
       const next = { ...current, fieldSources: { ...current.fieldSources } };
       for (const { key } of TASK_FIELDS) {
         const extracted = result.detectedFields[key];
-        if (extracted?.value.trim() && (!next[key].trim() || next.fieldSources[key] === 'draft')) {
-          next[key] = extracted.value;
-          next.fieldSources[key] = 'draft';
-        }
+        const source = next.fieldSources[key];
+        if (source === 'manual' || source === 'clarification' || (next[key].trim() && source !== 'draft')) continue;
+        next[key] = extracted?.value.trim() ? extracted.value : '';
+        if (next[key]) next.fieldSources[key] = 'draft';
+        else delete next.fieldSources[key];
       }
       save(next);
-      setAnalysis(result); setStage(1);
+      // Questions follow the merged card, including preserved human answers and
+      // fields the latest extraction no longer supplies.
+      const missingFields = TASK_FIELDS.filter(({ key }) => !next[key].trim()).map(({ key }) => key);
+      setAnalysis({ ...result, missingFields, questions: createClarificationQuestions(missingFields) }); setStage(1);
       useAppStore.getState().recordEvent('Черновик проанализирован', result.fallbackUsed ? 'Локальные вопросы: AI недоступен' : result.provider);
     } catch (failure) {
       if (requestId === generation.current && !requestController.signal.aborted) setError(failure instanceof Error ? failure.message : 'Не удалось проанализировать черновик. Повторите попытку.');
@@ -114,8 +134,9 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
     }
     if (!next.tags.length) next.tags = ['Python', 'Analytics'];
     save(next); setExampleAnswers(true);
-    const after = calculateRating(next).total;
-    useAppStore.getState().recordEvent('Добавлены демонстрационные ответы', `Рейтинг: ${rating.total} → ${after}`);
+    const before = calculateRatingPreview(task).total;
+    const after = calculateRatingPreview(next).total;
+    useAppStore.getState().recordEvent('Добавлены демонстрационные ответы', `Предварительная оценка: ${before} → ${after}`);
     useAppStore.getState().notify('Примерные ответы заполнены. Проверьте и адаптируйте их под свою задачу.');
   }
 
@@ -179,8 +200,9 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
 
         {stage === 3 && <section className="panel stack">
           <div><span className="eyebrow">ШАГ 04</span><h2>Проверьте перед публикацией</h2><p className="muted">{task.title || 'Задача пока без названия'}</p></div>
+          <p>{task.confirmed ? 'Подтверждённый рейтинг' : 'Предварительная оценка'}</p>
           <div className="confirmation-score"><strong>{rating.total}<small>/100</small></strong><ReadinessBadge score={rating.total} /></div>
-          <p>Рейтинг показывает, насколько подробно описана задача. Низкий балл не мешает публикации: команда сможет уточнить детали в отклике.</p>
+          <p>{task.confirmed ? 'Рейтинг учитывает подтверждённые сведения.' : 'Оценка станет рейтингом после подтверждения сведений бизнесом.'} Низкий балл не мешает публикации: команда сможет уточнить детали в отклике.</p>
           {exampleAnswers && <div className="notice notice-warning">Вы добавили демонстрационные ответы. Подтверждая карточку, вы подтверждаете и эти сведения.</div>}
           {task.confirmed ? <div className="notice"><strong>Карточка подтверждена бизнесом.</strong><p>Теперь её можно опубликовать в каталоге.</p></div> : <><label className="consent-field"><input type="checkbox" checked={consent} disabled={activeRole !== 'business'} onChange={(event) => setConsent(event.target.checked)} /><span>Я подтверждаю корректность информации в карточке</span></label><Button disabled={!consent || activeRole !== 'business'} onClick={confirm}>Подтвердить карточку</Button></>}
           <div className="button-row"><Button disabled={!task.confirmed || activeRole !== 'business'} onClick={() => setStage(4)}>Перейти к публикации →</Button><Button variant="ghost" onClick={() => openEditor()}>Редактировать карточку</Button></div>

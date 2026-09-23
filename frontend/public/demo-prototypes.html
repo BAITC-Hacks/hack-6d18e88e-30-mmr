@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Учебные прототипы команд — AI Sana</title>
+  <style>
+    :root { color-scheme: light; font-family: Georgia, serif; color: #273229; background: #f4f5ed; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    header, main, footer { max-width: 1060px; margin: auto; padding: 28px; }
+    header { padding-top: 48px; }
+    h1 { font-size: clamp(28px, 5vw, 44px); letter-spacing: -.03em; margin: 12px 0; }
+    h2 { font-size: 28px; margin: 8px 0 18px; }
+    h3 { font: 600 16px/1.5 system-ui, sans-serif; margin: 0 0 12px; }
+    p, li { line-height: 1.7; }
+    a { color: #315f3f; text-underline-offset: 4px; }
+    a:focus-visible { outline: 3px solid #315f3f; outline-offset: 4px; }
+    .eyebrow, nav, .label, table, .steps, .notice, footer { font-family: system-ui, sans-serif; }
+    .eyebrow { letter-spacing: .1em; font-size: 12px; font-weight: 650; }
+    .notice { border-left: 4px solid #758652; background: #e9eddd; padding: 14px 18px; font-size: 14px; line-height: 1.6; }
+    nav { display: flex; flex-wrap: wrap; gap: 14px 22px; margin-top: 24px; font-size: 14px; }
+    main { padding-top: 0; }
+    article { background: white; border: 1px solid #dce0d4; padding: 28px; margin: 22px 0; scroll-margin-top: 20px; }
+    article:target { border-color: #315f3f; outline: 2px solid #315f3f; }
+    .label { color: #536149; font-size: 12px; font-weight: 650; }
+    .preview { margin: 24px 0; background: #f7f8f3; border-top: 2px solid #758652; padding: 20px; overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.5; }
+    th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #dce0d4; vertical-align: top; }
+    th { font-weight: 650; }
+    .steps { padding-left: 20px; font-size: 14px; }
+    .queue { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: 14px; min-width: 420px; font-family: system-ui, sans-serif; }
+    .queue > div { padding: 18px; border: 1px solid #dce0d4; text-align: center; }
+    .queue strong { display: block; font-size: 32px; margin: 10px 0; }
+    .meter { height: 9px; margin-top: 7px; background: #dce0d4; }
+    .meter > span { display: block; height: 100%; background: #60784b; }
+    footer { font-size: 13px; padding-bottom: 40px; color: #536149; }
+    @media (max-width: 600px) { header, main, footer { padding: 20px; } article { padding: 20px 16px; } .preview { padding: 14px 8px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/">← Вернуться в AI Sana</a>
+    <p class="eyebrow">AI SANA · ДЕМОНСТРАЦИОННЫЕ МАТЕРИАЛЫ</p>
+    <h1>Шесть идей в действии</h1>
+    <p>Небольшие макеты результатов, приложенные к учебным предложениям команд.</p>
+    <div class="notice"><strong>Учебные примеры.</strong> Команды, предложения, данные и показатели на этой странице синтетические. Это статические демонстрационные прототипы для хакатона; модели не обучались, реальные бизнес-результаты не заявляются.</div>
+    <nav aria-label="Прототипы команд">
+      <a href="#retail-neural">NeuralForge · спрос</a><a href="#retail-data">DataLab · закупки</a>
+      <a href="#health-byte">ByteCrew · очередь</a><a href="#logistics-route">RouteWorks · маршруты</a>
+      <a href="#education-spark">EduSpark · поддержка</a><a href="#fintech-neural">NeuralForge · документы</a>
+    </nav>
+  </header>
+  <main>
+    <article id="retail-neural" aria-labelledby="retail-neural-title">
+      <span class="label">СИНТЕТИЧЕСКАЯ КОМАНДА · NEURALFORGE · 3 НЕДЕЛИ</span>
+      <h2 id="retail-neural-title">Прогноз спроса с объяснением</h2>
+      <p>Менеджер сравнивает прогноз на неделю с остатками и видит причину рекомендации. Базовая модель и новая модель проверяются на одном временном отрезке.</p>
+      <div class="preview"><h3>Макет: магазин № 3 · следующая неделя</h3><table>
+        <thead><tr><th scope="col">Товар</th><th scope="col">Прогноз, шт.</th><th scope="col">Закупить, шт.</th><th scope="col">Причина</th></tr></thead>
+        <tbody><tr><td>Молоко 1 л</td><td>210</td><td>160</td><td>Рост продаж по выходным</td></tr><tr><td>Хлеб</td><td>350</td><td>290</td><td>Повторяемый недельный спрос</td></tr><tr><td>Яблоки</td><td>125</td><td>95</td><td>Запланированная акция</td></tr></tbody>
+      </table></div>
+      <h3>План реализации</h3><ol class="steps"><li>Проверить продажи, остатки и пропуски.</li><li>Подготовить сезонный baseline и временную валидацию.</li><li>Сравнить прогнозы и показать объяснения в панели.</li><li>Обсудить рекомендации с менеджерами.</li></ol>
+    </article>
+    <article id="retail-data" aria-labelledby="retail-data-title">
+      <span class="label">СИНТЕТИЧЕСКАЯ КОМАНДА · DATALAB · 18 ДНЕЙ</span>
+      <h2 id="retail-data-title">Панель закупок и риска дефицита</h2>
+      <p>Прозрачная статистическая модель показывает диапазон спроса. Менеджер сам решает, какой запас закладывать до следующей поставки.</p>
+      <div class="preview"><h3>Макет: потребность двух магазинов</h3><table>
+        <thead><tr><th scope="col">Магазин / категория</th><th scope="col">Диапазон спроса</th><th scope="col">Текущий остаток</th><th scope="col">Риск дефицита</th></tr></thead>
+        <tbody><tr><td>№ 1 / молочная продукция</td><td>180–240 шт.</td><td>75 шт.</td><td>Высокий<div class="meter" aria-hidden="true"><span style="width:85%"></span></div></td></tr><tr><td>№ 2 / бакалея</td><td>90–125 шт.</td><td>130 шт.</td><td>Низкий<div class="meter" aria-hidden="true"><span style="width:15%"></span></div></td></tr></tbody>
+      </table></div>
+      <h3>План реализации</h3><ol class="steps"><li>Проверить выгрузку продаж и подготовить витрину.</li><li>Сравнить статистические модели по категориям.</li><li>Собрать панель и провести пилот на двух магазинах.</li></ol>
+    </article>
+    <article id="health-byte" aria-labelledby="health-byte-title">
+      <span class="label">СИНТЕТИЧЕСКАЯ КОМАНДА · BYTECREW · 2 НЕДЕЛИ</span>
+      <h2 id="health-byte-title">Электронная очередь без персональных данных</h2>
+      <p>Пациент получает номер талона. Администратор видит нагрузку окон, а экран очереди показывает только номер вызванного талона.</p>
+      <div class="preview"><h3>Макет табло регистратуры</h3><div class="queue"><div>Окно 1<strong>А-014</strong>Приглашаем</div><div>Окно 2<strong>А-015</strong>Приглашаем</div><div>Ожидают<strong>6</strong>талонов</div></div></div>
+      <h3>План реализации</h3><ol class="steps"><li>Провести интервью с регистратурой.</li><li>Согласовать сценарии выдачи и вызова талона.</li><li>Собрать интерфейс оператора и табло.</li><li>Проверить работу в одном окне.</li></ol>
+    </article>
+    <article id="logistics-route" aria-labelledby="logistics-route-title">
+      <span class="label">СИНТЕТИЧЕСКАЯ КОМАНДА · ROUTEWORKS · 3 НЕДЕЛИ ПОСЛЕ УТОЧНЕНИЯ</span>
+      <h2 id="logistics-route-title">Маршрут с учётом окон доставки</h2>
+      <p>Диспетчер проверяет порядок остановок, вместимость машины и обещанные интервалы. Перед расчётом потребуется уточнить ограничения доставки.</p>
+      <div class="preview"><h3>Макет: маршрут машины № 2</h3><table>
+        <thead><tr><th scope="col">Порядок</th><th scope="col">Остановка</th><th scope="col">Окно доставки</th><th scope="col">План прибытия</th></tr></thead>
+        <tbody><tr><td>1</td><td>Склад</td><td>09:00–09:30</td><td>09:00</td></tr><tr><td>2</td><td>Точка А</td><td>09:30–10:30</td><td>09:40</td></tr><tr><td>3</td><td>Точка Б</td><td>10:00–11:00</td><td>10:15</td></tr><tr><td>4</td><td>Точка В</td><td>10:30–12:00</td><td>10:50</td></tr></tbody>
+      </table></div>
+      <h3>План реализации</h3><ol class="steps"><li>Собрать примеры маршрутов и ограничения машин.</li><li>Согласовать окна доставки и допустимые задержки.</li><li>Сравнить оптимизацию с планом диспетчера на одной неделе.</li></ol>
+    </article>
+    <article id="education-spark" aria-labelledby="education-spark-title">
+      <span class="label">СИНТЕТИЧЕСКАЯ КОМАНДА · EDUSPARK · 4 НЕДЕЛИ</span>
+      <h2 id="education-spark-title">Ранняя поддержка студентов</h2>
+      <p>Куратор видит объяснимые сигналы и выбирает способ личной поддержки. Система не принимает решений о студенте автоматически.</p>
+      <div class="preview"><h3>Макет: список для внимания куратора</h3><table>
+        <thead><tr><th scope="col">Учебный ID</th><th scope="col">Наблюдение</th><th scope="col">Предложенный следующий шаг</th></tr></thead>
+        <tbody><tr><td>Демо-001</td><td>Три пропуска подряд</td><td>Уточнить причину отсутствия</td></tr><tr><td>Демо-002</td><td>Не сданы две работы</td><td>Предложить консультацию</td></tr><tr><td>Демо-003</td><td>Снижение активности в группе</td><td>Обсудить учебную нагрузку</td></tr></tbody>
+      </table></div>
+      <h3>План реализации</h3><ol class="steps"><li>Согласовать признаки и исключить утечки данных.</li><li>Проверить baseline на обезличенной выборке.</li><li>Собрать панель и обратную связь кураторов.</li></ol>
+    </article>
+    <article id="fintech-neural" aria-labelledby="fintech-neural-title">
+      <span class="label">СИНТЕТИЧЕСКАЯ КОМАНДА · NEURALFORGE · 4 НЕДЕЛИ</span>
+      <h2 id="fintech-neural-title">Локальная классификация документов</h2>
+      <p>Сервис предлагает тип документа и оценку уверенности. Неуверенные результаты попадают на ручную проверку; файлы остаются внутри организации.</p>
+      <div class="preview"><h3>Макет: очередь обработки · порог 90%</h3><table>
+        <thead><tr><th scope="col">Файл</th><th scope="col">Предложенный тип</th><th scope="col">Уверенность</th><th scope="col">Следующий шаг</th></tr></thead>
+        <tbody><tr><td>demo-001.pdf</td><td>Счёт</td><td>97%</td><td>Передать специалисту по счетам</td></tr><tr><td>demo-002.pdf</td><td>Акт</td><td>94%</td><td>Передать ответственному</td></tr><tr><td>demo-003.pdf</td><td>Договор</td><td>68%</td><td>Ручная проверка</td></tr></tbody>
+      </table></div>
+      <h3>План реализации</h3><ol class="steps"><li>Проверить разметку и выделение текста.</li><li>Сравнить локальные модели классификации.</li><li>Собрать сервис и панель ручной проверки.</li><li>Проверить нагрузку и описать ограничения.</li></ol>
+    </article>
+  </main>
+  <footer>AI Sana · Учебные примеры для демонстрации процесса. Все значения вымышлены. <a href="/">Открыть приложение</a></footer>
+</body>
+</html>

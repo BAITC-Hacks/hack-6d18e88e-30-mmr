@@ -7,6 +7,7 @@ import { Modal } from '../../components/Modal';
 import { calculateTeamMatch } from '../../services/teamMatchService';
 import { createEmptyTask } from '../../data/syntheticData';
 import { TaskDetails } from '../catalog/TaskDetails';
+import { sessions } from '../builder/builderSessions';
 import { MilestoneTracker } from '../milestones/MilestoneTracker';
 import { ActivityTimeline } from '../demo/ActivityTimeline';
 import { proposalLabels } from '../proposals/proposalLabels';
@@ -33,7 +34,7 @@ function ProposalComparison({ proposals, task, onClose }: { proposals: Proposal[
 }
 
 export function BusinessHub({ view }: { view: 'overview' | 'tasks' | 'proposals' }) {
-  const { tasks, teams, proposals, milestones, activeTaskId, setActiveTask, addTask, navigate, selectProposal, rejectProposal, demoStep } = useAppStore();
+  const { tasks, teams, proposals, milestones, activeTaskId, setActiveTask, addTask, navigate, selectProposal, rejectProposal, demoStep, setDemoStep } = useAppStore();
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [compare, setCompare] = useState(false);
   const [status, setStatus] = useState('');
@@ -50,11 +51,18 @@ export function BusinessHub({ view }: { view: 'overview' | 'tasks' | 'proposals'
   const sortedTasks = [...tasks].filter((task) => !taskFilter || (taskFilter === 'published' ? task.published : !task.published)).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
 
   function openProposals(task: Task) { setActiveTask(task.id); setStatus(''); navigate('proposals'); }
+  function editTask(task: Task) {
+    const previous = sessions.get(task.id);
+    const analysis = previous?.rawDraft === (task.rawDraft || '') && previous.industry === task.industry ? previous.analysis : null;
+    sessions.set(task.id, { exampleAnswers: false, ...previous, analysis, stage: 2,
+      rawDraft: task.rawDraft || '', industry: task.industry });
+    setDetailsId(null); setActiveTask(task.id); setDemoStep(0); navigate('builder');
+  }
   function createTask() { const task = createEmptyTask(); addTask(task); setActiveTask(task.id); navigate('builder'); }
   function taskList(items: Task[]) { return <div className="business-task-list">{items.map((task) => {
     const responses = proposals.filter((proposal) => proposal.taskId === task.id);
     const chosen = responses.filter((proposal) => proposal.status === 'selected').length;
-    return <article className="business-task-row" key={task.id}><div className="business-task-info"><div className="tags"><span className="eyebrow">{task.industry}</span><span className={`badge ${task.published ? '' : 'tag'}`}>{task.published ? 'Опубликована' : 'Не опубликована'}</span></div><h3><button className="text-button task-title-button" onClick={() => setDetailsId(task.id)}>{task.title}</button></h3><ReadinessBadge score={task.rating} /></div><div className="task-row-stat"><strong>{task.rating}</strong><span>готовность</span></div><div className="task-row-stat"><strong>{responses.length}</strong><span>откликов</span></div><div className="task-row-stat"><strong>{chosen}</strong><span>команд выбрано</span></div><Button variant="secondary" onClick={() => { if (task.published) openProposals(task); else { setActiveTask(task.id); navigate('builder'); } }}>{task.published ? 'Открыть отклики' : 'Продолжить карточку'}<span aria-hidden="true">↗</span></Button></article>;
+    return <article className="business-task-row" key={task.id}><div className="business-task-info"><div className="tags"><span className="eyebrow">{task.industry}</span><span className={`badge ${task.published ? '' : 'tag'}`}>{task.published ? 'Опубликована' : 'Не опубликована'}</span></div><h3><button className="text-button task-title-button" onClick={() => setDetailsId(task.id)}>{task.title}</button></h3><ReadinessBadge score={task.rating} /><div><Button variant="ghost" onClick={() => editTask(task)}>Редактировать карточку</Button></div></div><div className="task-row-stat"><strong>{task.rating}</strong><span>готовность</span></div><div className="task-row-stat"><strong>{responses.length}</strong><span>откликов</span></div><div className="task-row-stat"><strong>{chosen}</strong><span>команд выбрано</span></div><Button variant="secondary" onClick={() => { if (task.published) openProposals(task); else { setActiveTask(task.id); navigate('builder'); } }}>{task.published ? 'Открыть отклики' : 'Продолжить карточку'}<span aria-hidden="true">↗</span></Button></article>;
   })}</div>; }
 
   return <div className="stack workspace-page">
@@ -72,7 +80,7 @@ export function BusinessHub({ view }: { view: 'overview' | 'tasks' | 'proposals'
       {demoStep === 8 && <div className="notice">Откройте этапы выбранной команды ниже и подтвердите выполненный результат. Баллы начисляются один раз за этап.</div>}
       {shownProposals.length === 0 ? <EmptyState title={taskProposals.length ? 'Нет предложений с таким статусом' : 'Первый отклик впереди'} description={taskProposals.length ? 'Измените фильтр, чтобы увидеть остальные предложения.' : 'После публикации задачи студенческие команды смогут предложить свои идеи.'} action={taskProposals.length ? <Button variant="secondary" onClick={() => setStatus('')}>Показать все</Button> : undefined} /> : shownProposals.map((proposal) => { const team = teams.find((item) => item.id === proposal.teamId); const match = selectedTask && team ? calculateTeamMatch(selectedTask, team) : null; return <article className="panel business-proposal" key={proposal.id}><div className="section-heading"><div><div className="tags"><span className={`badge status-${proposal.status}`}>{proposalLabels[proposal.status]}</span><span className="muted small-text">{new Date(proposal.createdAt).toLocaleDateString('ru-RU')}</span></div><h2>{team?.name ?? 'Команда'}</h2><div className="tags">{team?.technologies.map((technology) => <span className="badge tag" key={technology}>{technology}</span>)}</div></div>{match && <div className="proposal-match"><strong>{match.total}<small>%</small></strong><span>соответствие</span></div>}</div><div className="proposal-content-grid"><section><h3>Идея и подход</h3><p className="preserve-lines">{proposal.idea}</p></section><section><h3>План реализации</h3><p className="preserve-lines">{proposal.implementationPlan}</p></section></div><div className="proposal-meta"><div><span className="muted">Оценка сроков</span><strong>{proposal.estimatedTime}</strong></div><div><span className="muted">Прототип / GitHub</span><PrototypeLink url={proposal.prototypeUrl} /></div></div>{proposal.status === 'pending' && <div className="proposal-decision-actions"><Button onClick={() => selectProposal(proposal.id)}>Выбрать команду <span aria-hidden="true">↗</span></Button><Button variant="ghost" onClick={() => setRejecting(proposal.id)}>Отклонить предложение</Button></div>}{proposal.status === 'selected' && <MilestoneTracker taskId={proposal.taskId} teamId={proposal.teamId} />}</article>; })}
     </>}
-    {details && <TaskDetails task={details} onClose={() => setDetailsId(null)} />}
+    {details && <TaskDetails task={details} onClose={() => setDetailsId(null)} onEdit={() => editTask(details)} />}
     {compare && selectedTask && <ProposalComparison proposals={taskProposals} task={selectedTask} onClose={() => setCompare(false)} />}
     {rejecting && <Modal open onClose={() => setRejecting(null)} title="Отклонить предложение?"><p>Студенческая команда увидит статус «Отклонено». Предложения других команд останутся без изменений.</p><div className="modal-actions"><Button variant="secondary" onClick={() => setRejecting(null)}>Отмена</Button><Button variant="danger" onClick={() => { rejectProposal(rejecting); setRejecting(null); }}>Отклонить предложение</Button></div></Modal>}
   </div>;

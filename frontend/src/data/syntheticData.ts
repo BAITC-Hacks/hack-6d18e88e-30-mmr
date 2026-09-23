@@ -2,7 +2,7 @@ import type { Task } from '../types/task';
 import type { Team } from '../types/team';
 import type { Proposal } from '../types/proposal';
 import type { TaskDraftSeed } from '../types/ai';
-import { calculateRating, getReadinessLevel } from '../services/ratingService.ts';
+import { calculateRating, calculateRatingPreview, getReadinessLevel } from '../services/ratingService.ts';
 
 export function createEmptyTask(draft = '', industry = 'Retail'): Task {
   const now = new Date().toISOString();
@@ -36,9 +36,9 @@ function seedTask(id: string, values: Partial<Task>): Task {
     rating: 0, readinessLevel: 'draft', createdAt: '2026-09-20T08:00:00.000Z',
     updatedAt: '2026-09-20T08:00:00.000Z', fieldSources: {}, ...values,
   };
+  if (task.confirmed) task.confirmedFields = Object.keys(demoAnswers).filter(key => Boolean(task[key as keyof Task]));
   task.rating = calculateRating(task).total;
   task.readinessLevel = getReadinessLevel(task.rating);
-  if (task.confirmed) task.confirmedFields = Object.keys(demoAnswers).filter(key => Boolean(task[key as keyof Task]));
   task.fieldSources = Object.fromEntries(Object.keys(demoAnswers).filter(key => Boolean(task[key as keyof Task])).map(key => [key, task.published ? 'manual' : 'draft']));
   return task;
 }
@@ -156,44 +156,49 @@ export const seedTeams: Team[] = [
 // Core AI scope checks and draft pickers share the same five UI examples.
 export const seedDrafts: TaskDraftSeed[] = seedTasks.filter(task => !task.published).map(task => ({
   id: task.id, title: task.title, industry: task.industry, text: task.rawDraft || task.context,
-  completeness: 'weak', estimatedInitialScore: task.rating,
+  completeness: 'weak', estimatedInitialScore: calculateRatingPreview(task).total,
 }));
 
+const demoOrigin = typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol)
+  ? window.location.origin : 'http://localhost:5173';
+const demoPrototypeUrl = (section: string) => `${demoOrigin}/demo-prototypes.html#${section}`;
+
+// These six proposals and their linked local prototype pages are synthetic teaching examples.
 export const seedProposals: Proposal[] = [
   {
     id: 'proposal-retail-neural', taskId: 'task-retail', teamId: 'team-neuralforge',
     idea: 'Построим модель прогноза по магазинам и товарам, сравним её с сезонным baseline и покажем причины рекомендации.',
     implementationPlan: '1. Проверка качества продаж. 2. Временная валидация и baseline. 3. Модель спроса. 4. Панель и демонстрация менеджерам.',
-    estimatedTime: '3 недели', prototypeUrl: '', status: 'pending', createdAt: '2026-09-21T12:00:00.000Z',
+    estimatedTime: '3 недели', prototypeUrl: demoPrototypeUrl('retail-neural'), status: 'pending', createdAt: '2026-09-21T12:00:00.000Z',
   },
   {
     id: 'proposal-retail-data', taskId: 'task-retail', teamId: 'team-datalab',
     idea: 'Начнём с прозрачной статистической модели и панели Power BI. Покажем прогноз, интервалы и ожидаемый дефицит.',
     implementationPlan: 'Проверим выгрузку, подготовим витрину, обучим модели по категориям и проведём пилот на двух магазинах.',
-    estimatedTime: '18 дней', prototypeUrl: 'https://github.com/topics/demand-forecasting', status: 'pending', createdAt: '2026-09-21T14:30:00.000Z',
+    estimatedTime: '18 дней', prototypeUrl: demoPrototypeUrl('retail-data'), status: 'pending', createdAt: '2026-09-21T14:30:00.000Z',
   },
   {
     id: 'proposal-health-byte', taskId: 'task-healthcare', teamId: 'team-bytecrew',
     idea: 'Сделаем простой интерфейс оператора и контрастное табло очереди, которое работает без персональных данных.',
     implementationPlan: 'Интервью с регистратурой, кликабельный прототип, React приложение, тест в одном окне и доработка сценариев.',
-    estimatedTime: '2 недели', prototypeUrl: '', status: 'pending', createdAt: '2026-09-20T11:00:00.000Z',
+    estimatedTime: '2 недели', prototypeUrl: demoPrototypeUrl('health-byte'), status: 'pending', createdAt: '2026-09-20T11:00:00.000Z',
   },
   {
     id: 'proposal-logistics-route', taskId: 'task-logistics', teamId: 'team-routeworks',
     idea: 'Уточним ограничения доставки и сравним маршруты диспетчера с оптимизацией по времени и вместимости машины.',
     implementationPlan: 'Соберём примеры маршрутов, согласуем окна доставки, реализуем оптимизатор и проверим на одной рабочей неделе.',
-    estimatedTime: '3 недели после уточнения данных', prototypeUrl: 'https://github.com/google/or-tools', status: 'pending', createdAt: '2026-09-22T15:00:00.000Z',
+    estimatedTime: '3 недели после уточнения данных', prototypeUrl: demoPrototypeUrl('logistics-route'), status: 'pending', createdAt: '2026-09-22T15:00:00.000Z',
   },
   {
     id: 'proposal-education-spark', taskId: 'task-education', teamId: 'team-eduspark',
     idea: 'Покажем куратору факторы риска и возможность отметить полезность сигнала, без автоматических решений о студенте.',
     implementationPlan: 'Согласуем признаки, исключим утечки данных, обучим baseline, сделаем панель и соберём обратную связь кураторов.',
-    estimatedTime: '4 недели', prototypeUrl: '', status: 'pending', createdAt: '2026-09-20T16:00:00.000Z',
+    estimatedTime: '4 недели', prototypeUrl: demoPrototypeUrl('education-spark'), status: 'pending', createdAt: '2026-09-20T16:00:00.000Z',
   },
   {
     id: 'proposal-fintech-neural', taskId: 'task-fintech', teamId: 'team-neuralforge',
     idea: 'Локальный NLP классификатор с порогом уверенности; сложные документы направляем специалисту на проверку.',
     implementationPlan: 'Аудит разметки, выделение текста, сравнение моделей, FastAPI сервис, нагрузочная проверка и документация.',
-    estimatedTime: '4 недели', prototypeUrl: '', status: 'pending', createdAt: '2026-09-21T10:00:00.000Z',
+    estimatedTime: '4 недели', prototypeUrl: demoPrototypeUrl('fintech-neural'), status: 'pending', createdAt: '2026-09-21T10:00:00.000Z',
   },
 ];

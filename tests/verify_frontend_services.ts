@@ -1,5 +1,5 @@
 ﻿import assert from 'node:assert/strict';
-import { calculateRating, getReadinessLevel } from '../frontend/src/services/ratingService';
+import { calculateRating, calculateRatingPreview, getReadinessLevel } from '../frontend/src/services/ratingService';
 import { calculateTeamMatch, getRecommendedTasksForTeam } from '../frontend/src/services/teamMatchService';
 import { demoAnswers, seedDrafts, seedTasks, seedTeams, seedProposals } from '../frontend/src/data/syntheticData';
 import type { Task } from '../frontend/src/types/task';
@@ -19,21 +19,24 @@ const blankTeam: Team = {
 };
 const fullText = 'Подробное описание с конкретными исходными условиями и проверяемым результатом работы команды.';
 
-// Integrated contract: live completeness is separate from confirmation; potential is the attainable ceiling.
+// Preview is live; only explicit confirmation can award points.
 assert.equal(calculateRating(blankTask).total, 0);
 assert.equal(calculateRating(blankTask).potentialTotal, 100);
-assert.equal(calculateRating({ ...seedTasks[0], confirmedFields: [] }).total, seedTasks[0].rating);
-assert.equal(calculateRating({ ...seedTasks[0], confirmedFields: [] }).potentialTotal, 100);
+const filledDraft = { ...blankTask, ...demoAnswers };
+assert.equal(calculateRatingPreview(filledDraft).total, 100);
+assert.equal(calculateRating(filledDraft).total, 0);
+assert.equal(calculateRating({ ...filledDraft, confirmed: true }).total, 0);
+assert.equal(calculateRating({ ...filledDraft, confirmed: true, confirmedFields: [...ratingFields] }).total, 100);
 assert.equal(calculateRating({ ...blankTask, confirmedFields: [...ratingFields] }).total, 0);
 for (const placeholder of ['Не указано', 'Не указаны', 'Требует уточнения', 'Требуется уточнение', 'Будет уточнено', 'Не заполнено', 'Неизвестно', 'Нет данных', 'TBD', 'unknown', 'not provided', 'N/A', '??????', '      ']) {
-  const task = { ...blankTask, confirmedFields: [...ratingFields] };
+  const task = { ...blankTask, confirmed: true, confirmedFields: [...ratingFields] };
   for (const field of ratingFields) task[field] = placeholder;
   assert.equal(calculateRating(task).total, 0, `Placeholder must not earn points: ${placeholder}`);
   assert.equal(calculateRating(task).potentialTotal, 100);
 }
-assert.equal(calculateRating({ ...blankTask, constraints: 'Нет ограничений по используемым технологиям.', confirmedFields: ['constraints'] }).constraints, 10);
-assert.equal(calculateRating({ ...blankTask, contact: 'lead@demo.kz', confirmedFields: ['contact'] }).businessCommunication, 5);
-const contextOnly = calculateRating({ ...blankTask, context: fullText, confirmedFields: ['context', 'context', 'unrecognized'] });
+assert.equal(calculateRating({ ...blankTask, confirmed: true, constraints: 'Нет ограничений по используемым технологиям.', confirmedFields: ['constraints'] }).constraints, 10);
+assert.equal(calculateRating({ ...blankTask, confirmed: true, contact: 'lead@demo.kz', confirmedFields: ['contact'] }).businessCommunication, 5);
+const contextOnly = calculateRating({ ...blankTask, confirmed: true, context: fullText, confirmedFields: ['context', 'context', 'unrecognized'] });
 assert.equal(contextOnly.contextNeed, 10);
 assert.equal(contextOnly.recommendations.some((recommendation) => recommendation.field === 'context'), false);
 assert.equal(contextOnly.recommendations.find((recommendation) => recommendation.field === 'need')?.possibleGain, 10);
@@ -46,7 +49,7 @@ for (const [score, level] of [[0, 'draft'], [39, 'draft'], [40, 'working'], [69,
 const ratingFixtures = [blankTask, ...seedTasks, { ...blankTask, availableData: 'Краткие данные', confirmedFields: ['availableData'] }];
 for (const task of ratingFixtures) {
   const before = JSON.stringify(task);
-  const breakdown = calculateRating(task);
+  const breakdown = calculateRatingPreview(task);
   assert.equal(JSON.stringify(task), before, 'Rating is pure');
   assert.ok(breakdown.total >= 0 && breakdown.total <= breakdown.potentialTotal && breakdown.potentialTotal <= 100);
   assert.equal(breakdown.total, breakdown.contextNeed + breakdown.data + breakdown.expectedResult + breakdown.successCriteria + breakdown.constraints + breakdown.users + breakdown.businessCommunication);
@@ -56,8 +59,9 @@ for (const task of ratingFixtures) {
     assert.ok(recommendation.message.trim().length > 0);
     if (index > 0) assert.ok(breakdown.recommendations[index - 1].possibleGain >= recommendation.possibleGain);
     const improved = { ...task, [recommendation.field]: demoAnswers[recommendation.field], confirmedFields: [...task.confirmedFields, recommendation.field] };
-    assert.equal(calculateRating(improved).total - breakdown.total, recommendation.possibleGain, `Incorrect gain for ${recommendation.field}`);
+    assert.equal(calculateRatingPreview(improved).total - breakdown.total, recommendation.possibleGain, `Incorrect gain for ${recommendation.field}`);
   }
+  assert.equal(calculateRating({ ...task, confirmed: true, confirmedFields: [...ratingFields] }).total, breakdown.total);
 }
 
 // Demo fixtures must agree with scoring, cover all readiness levels, and have valid links.
@@ -74,7 +78,7 @@ for (const proposal of seedProposals) {
   assert.ok(seedTasks.some((task) => task.id === proposal.taskId));
   assert.ok(seedTeams.some((team) => team.id === proposal.teamId));
   assert.ok(proposal.idea && proposal.implementationPlan && proposal.estimatedTime);
-  if (proposal.prototypeUrl) assert.ok(['http:', 'https:'].includes(new URL(proposal.prototypeUrl).protocol));
+  assert.ok(['http:', 'https:'].includes(new URL(proposal.prototypeUrl).protocol));
 }
 
 // Empty profiles cannot receive inferred compatibility or match empty industry labels.
@@ -117,4 +121,4 @@ for (let index = 1; index < recommendations.length; index++) {
   assert.ok(recommendations[index - 1].match.total >= recommendations[index].match.total);
 }
 
-console.log('PASS: live rating, attainable potential, exact gains, seed consistency and TeamMatch regressions');
+console.log('PASS: preview, confirmed rating, attainable gains, complete seeds and TeamMatch regressions');

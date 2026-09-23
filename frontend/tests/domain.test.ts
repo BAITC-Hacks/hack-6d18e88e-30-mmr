@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { useAppStore } from '../src/app/store.ts';
 import { RATING_CATEGORIES } from '../src/app/constants.ts';
 import { createEmptyTask, demoAnswers, seedProposals, seedTasks, seedTeams } from '../src/data/syntheticData.ts';
-import { calculateRating, getReadinessLevel } from '../src/services/ratingService.ts';
+import { calculateRating, calculateRatingPreview, getReadinessLevel } from '../src/services/ratingService.ts';
 import { calculateTeamMatch } from '../src/services/teamMatchService.ts';
 import { clearStorageError, getStorageError, safeLocalStorage, STORAGE_KEY, STORAGE_VERSION, validateStoredState } from '../src/services/storageService.ts';
 import type { Proposal } from '../src/types/proposal.ts';
@@ -55,18 +55,19 @@ test('rating boundaries and weights follow the 100-point rubric', () => {
   }
 });
 
-test('specific answers increase rating, remove resolved advice and expose accurate possible gains', () => {
+test('specific answers improve the preview without awarding unconfirmed points', () => {
   const weak = { ...createEmptyTask(), context: 'Нужен прогноз', need: 'Улучшить продажи' };
-  const before = calculateRating(weak);
+  const before = calculateRatingPreview(weak);
   const strong = { ...weak, ...demoAnswers };
-  const after = calculateRating(strong);
+  const after = calculateRatingPreview(strong);
   assert.ok(after.total > before.total);
   assert.equal(after.total, 100);
   assert.equal(after.recommendations.length, 0);
   const criterionOnly = { ...weak, successCriteria: demoAnswers.successCriteria };
-  const criterionGain = calculateRating(criterionOnly).total - before.total;
+  const criterionGain = calculateRatingPreview(criterionOnly).total - before.total;
   assert.equal(criterionGain, before.recommendations.find(item => item.field === 'successCriteria')?.possibleGain);
-  assert.equal(calculateRating({ ...createEmptyTask(), context: 'TBD', need: 'не знаю', successCriteria: 'нет' }).total, 0);
+  assert.equal(calculateRating(strong).total, 0);
+  assert.equal(calculateRatingPreview({ ...createEmptyTask(), context: 'TBD', need: 'не знаю', successCriteria: 'нет' }).total, 0);
 });
 
 test('team matching changes with capabilities and explains required matches and gaps', () => {
@@ -101,6 +102,8 @@ test('content edits invalidate confirmation and publication and recalculate read
   assert.equal(edited.confirmed, false);
   assert.equal(edited.published, false);
   assert.deepEqual(edited.confirmedFields, []);
+  assert.equal(edited.rating, 0);
+  assert.equal(calculateRatingPreview(edited).total, 80);
   assert.equal(edited.rating, calculateRating(edited).total);
   assert.ok(edited.rating < previous.rating);
   assert.equal(current().publishTask(edited.id), false);

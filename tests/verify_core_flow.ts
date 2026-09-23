@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { analyzeDraft, generateCardFromAnswers } from '../frontend/src/services/aiClient';
-import { calculateRating } from '../frontend/src/services/ratingService';
+import { calculateRating, calculateRatingPreview } from '../frontend/src/services/ratingService';
 import { getRecommendedTasksForTeam } from '../frontend/src/services/teamMatchService';
 import { useAppStore } from '../frontend/src/app/store';
 import type { Task } from '../frontend/src/types/task';
@@ -23,8 +23,9 @@ try {
     ['consultationFormat', 'Созвон по понедельникам, вопросы в чате, обратная связь в течение одного дня.'],
   ].map(([field, answer]) => ({ field, answer, questionId: `q-${field}` }));
   const card = await generateCardFromAnswers({ draft, industry: 'Retail', answers });
-  assert.ok(calculateRating(card as Task).total >= 90, 'Structured answers produce a live readiness score before approval');
-  assert.equal(calculateRating(card as Task).potentialTotal, 100);
+  assert.ok(calculateRatingPreview(card as Task).total >= 90, 'Structured answers produce a useful preview before approval');
+  assert.equal(calculateRating(card as Task).total, 0, 'Approval is required to earn rating points');
+  assert.equal(calculateRatingPreview(card as Task).potentialTotal, 100);
   useAppStore.getState().addTask(card as Task);
   const id = card.id!;
   const currentTask = () => useAppStore.getState().tasks.find(task => task.id === id)!;
@@ -56,10 +57,14 @@ try {
   const beforeEdit = currentTask().rating;
   const dataPoints = calculateRating(currentTask()).data;
   useAppStore.getState().updateTask({ ...currentTask(), availableData: '' });
-  assert.equal(currentTask().rating, beforeEdit - dataPoints);
+  assert.equal(currentTask().rating, 0);
+  assert.equal(calculateRatingPreview(currentTask()).total, beforeEdit - dataPoints);
   assert.equal(currentTask().confirmed, false);
   assert.equal(currentTask().published, false);
-  console.log('Offline core flow passed: draft → questions → card → live rating → business confirmation → publish → proposal → manual selection → progress once.');
+  assert.equal(useAppStore.getState().confirmTask(id), true);
+  assert.equal(currentTask().rating, beforeEdit - dataPoints);
+  assert.equal(useAppStore.getState().publishTask(id), true);
+  console.log('Offline core flow passed: draft → questions → preview → confirmed rating → publish → proposal → manual selection → progress once → edit/reconfirm.');
 } finally {
   globalThis.fetch = originalFetch;
   useAppStore.getState().resetDemo();

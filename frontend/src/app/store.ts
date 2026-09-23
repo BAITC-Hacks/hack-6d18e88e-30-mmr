@@ -6,8 +6,7 @@ import { seedTasks, seedTeams, seedProposals } from '../data/syntheticData.ts';
 import { calculateRating, getReadinessLevel } from '../services/ratingService.ts';
 import { clearStorageError, getStorageError, isSafePrototypeUrl, proposalSchema, taskSchema, safeLocalStorage, STORAGE_KEY, STORAGE_VERSION } from '../services/storageService.ts';
 import type { ActivityEvent, AppPage, PersistedAppState } from '../services/storageService.ts';
-import { TASK_FIELDS } from './constants.ts';
-import { ensureStarterMilestones } from './persistence.ts';
+import { MILESTONE_TEMPLATES, TASK_FIELDS } from './constants.ts';
 
 export type { AppPage, ActivityEvent };
 export type Page = AppPage;
@@ -97,9 +96,7 @@ export const useAppStore = create<AppState>()(persist((set, get) => {
         published: changed ? false : previous.published,
         confirmedFields: changed ? [] : previous.confirmedFields,
       });
-      const improved = next.rating > previous.rating;
       commit({ tasks: state.tasks.map(item => item.id === task.id ? next : item),
-        events: improved ? withEvent(state, 'Рейтинг задачи вырос', `${previous.rating} → ${next.rating} · ${next.title || 'Черновик'}`) : state.events,
         ...(changed && previous.confirmed ? { toast: 'Карточка изменена. Подтвердите данные повторно перед публикацией.' } : {}),
       });
     },
@@ -111,7 +108,8 @@ export const useAppStore = create<AppState>()(persist((set, get) => {
       if (!task.title.trim() || !task.context.trim() || !task.need.trim()) return deny('Заполните название, контекст и потребность перед подтверждением.');
       if (task.confirmed) return true;
       const next = normalizedTask({ ...task, confirmed: true, confirmedFields: TASK_FIELDS.filter(field => task[field.key].trim()).map(field => field.key) });
-      commit({ tasks: state.tasks.map(item => item.id === id ? next : item), toast: 'Карточка подтверждена бизнесом.', events: withEvent(state, 'Карточка подтверждена', task.title) });
+      commit({ tasks: state.tasks.map(item => item.id === id ? next : item), toast: 'Карточка подтверждена бизнесом.',
+        events: withEvent(state, 'Карточка подтверждена', `${task.title} · Подтверждённый рейтинг: ${task.rating} → ${next.rating}`) });
       return true;
     },
     publishTask(id) {
@@ -148,11 +146,13 @@ export const useAppStore = create<AppState>()(persist((set, get) => {
       const proposal = state.proposals.find(item => item.id === id);
       if (!proposal || proposal.status === 'rejected') return false;
       if (proposal.status === 'selected') return true;
-      const proposals = state.proposals.map(item => item.id === id ? { ...item, status: 'selected' as const } : item);
-      const milestones = ensureStarterMilestones(proposals, state.milestones);
+      const existing = state.milestones.filter(item => item.taskId === proposal.taskId && item.teamId === proposal.teamId);
+      const milestones = MILESTONE_TEMPLATES.filter(template => !existing.some(item => item.title === template.title)).map(template => ({
+        ...template, id: crypto.randomUUID(), taskId: proposal.taskId, teamId: proposal.teamId, status: 'pending' as const,
+      }));
       const team = state.teams.find(item => item.id === proposal.teamId);
-      commit({ proposals,
-        milestones, toast: `Команда ${team?.name} выбрана. Остальные отклики доступны.`,
+      commit({ proposals: state.proposals.map(item => item.id === id ? { ...item, status: 'selected' } : item),
+        milestones: [...state.milestones, ...milestones], toast: `Команда ${team?.name} выбрана. Остальные отклики доступны.`,
         events: withEvent(state, 'Бизнес выбрал команду', `${team?.name} · ${state.tasks.find(task => task.id === proposal.taskId)?.title}`) });
       return true;
     },

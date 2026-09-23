@@ -24,6 +24,7 @@ const { resetBuilderSessions } = await import('../src/features/builder/builderSe
 const { useAiInspectorStore } = await import('../src/services/aiClient.ts');
 const { TASK_FIELDS } = await import('../src/app/constants.ts');
 const { STORAGE_KEY } = await import('../src/services/storageService.ts');
+const { calculateRatingPreview } = await import('../src/services/ratingService.ts');
 const realFetch = globalThis.fetch;
 let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
@@ -65,13 +66,13 @@ afterEach(async () => {
 });
 after(() => window.close());
 
-test('full business UI: demo draft → AI fallback → answers → live rating → consent → publication', async () => {
+test('full business UI: draft → AI → preview → confirmed rating → publication', async () => {
   await clickDemo(1);
   assert.equal(current().page, 'builder');
   assert.match((window.document.getElementById('draft-input') as HTMLTextAreaElement).value, /прогнозировать спрос/);
   assert.equal(demoTask().confirmed, false);
   assert.equal(demoTask().published, false);
-  const startingRating = demoTask().rating;
+  const startingRating = calculateRatingPreview(demoTask()).total;
 
   let resolveRequest!: (response: Response) => void;
   globalThis.fetch = async () => new Promise<Response>(resolve => { resolveRequest = resolve; });
@@ -87,7 +88,9 @@ test('full business UI: demo draft → AI fallback → answers → live rating �
 
   await clickDemo(3);
   await click(button('Заполнить примерные ответы'));
-  assert.ok(demoTask().rating > startingRating + 40);
+  assert.ok(calculateRatingPreview(demoTask()).total > startingRating + 40);
+  assert.equal(demoTask().rating, 0, 'Preview points are not awarded before confirmation.');
+  assert.match(host.querySelector('.rating-panel')?.textContent || '', /Предварительная оценка/);
   assert.equal(demoTask().fieldSources?.availableData, 'clarification');
   assert.equal(demoTask().confirmed, false, 'Demo answers never confirm business facts automatically.');
   assert.equal(demoTask().published, false);
@@ -96,13 +99,14 @@ test('full business UI: demo draft → AI fallback → answers → live rating �
   for (const { key } of TASK_FIELDS) assert.ok(window.document.getElementById(`task-field-${key}`));
   assert.equal(host.querySelectorAll('.rating-category').length, 7);
 
-  const completeRating = demoTask().rating;
+  const completeRating = calculateRatingPreview(demoTask()).total;
   const criterion = demoTask().successCriteria;
   await setText('task-field-successCriteria', '');
-  assert.ok(demoTask().rating < completeRating, 'Rating immediately reflects a cleared success metric.');
+  assert.ok(calculateRatingPreview(demoTask()).total < completeRating, 'Preview reflects a cleared success metric.');
+  assert.equal(demoTask().rating, 0);
   assert.match(host.querySelector('.rating-improvements')?.textContent || '', /измеримую метрику/);
   await setText('task-field-successCriteria', criterion);
-  assert.equal(demoTask().rating, completeRating);
+  assert.equal(calculateRatingPreview(demoTask()).total, completeRating);
   assert.equal(demoTask().fieldSources?.successCriteria, 'manual');
 
   await click(button('Проверить готовность'));
@@ -112,6 +116,8 @@ test('full business UI: demo draft → AI fallback → answers → live rating �
   assert.equal(button('Подтвердить карточку').disabled, false);
   await click(button('Подтвердить карточку'));
   assert.equal(demoTask().confirmed, true);
+  assert.equal(demoTask().rating, completeRating);
+  assert.match(host.querySelector('.rating-panel')?.textContent || '', /Подтверждённый рейтинг/);
   assert.equal(demoTask().published, false, 'Confirmation and publication are separate actions.');
   await click(button('Перейти к публикации'));
   await click(button('Опубликовать задачу'));
