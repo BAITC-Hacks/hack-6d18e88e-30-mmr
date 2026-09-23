@@ -1,5 +1,28 @@
 :root {
-  font-family: 'Segoe UI', Arial, sans-serif;
-  color: #202c27; background: #f7f8f4; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
-  --bg: #f7f8f4; --surface: #fff; --text: #202c27; --muted: #64716a; --border: #e0e6de; --accent: #245c44; --accent-hover: #194932; --accent-soft: #edf3e9; --danger: #a1322f; --radius: 14px; --shadow: 0 16px 55px #1e3a2921;
+  --font-body: 'Manrope', Arial, sans-serif;
+  --font-display: 'Unbounded', 'Manrope', Arial, sans-serif;
+  --bg: #f4f3eb; --surface: #fffef9; --text: #20251f; --muted: #62675c; --border: #d5d8c9;
+  --ink: #20251f; --on-ink: #f5f5e9; --ink-muted: #bcc4b1;
+  --action: #d4ed62; --action-hover: #c3df49; --on-action: #20251f;
+  --accent: #3c512b; --accent-hover: #263c18; --accent-soft: #ebefd9;
+  --danger: #a1322f; --radius: 16px; --shadow: 0 16px 48px #20251f18;
+  font-family: var(--font-body); color: var(--text); background: var(--bg);
+  font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+}
+:root[data-design='atelier'] {
+  --font-display: Georgia, 'Times New Roman', serif;
+  --bg: #f6f0e7; --surface: #fffbf5; --text: #302b26; --muted: #746257; --border: #ded1c3;
+  --ink: #48342b; --on-ink: #fff6eb; --ink-muted: #dfc5b4;
+  --action: #b9472f; --action-hover: #9d3924; --on-action: #ffffff;
+  --accent: #9d3924; --accent-hover: #802916; --accent-soft: #f4e3d6; --radius: 9px;
+  --shadow: 0 16px 48px #48342b18;
+}
+:root[data-design='index'] {
+  --font-display: 'Manrope', Arial, sans-serif;
+  --bg: #f4f6fa; --surface: #ffffff; --text: #182132; --muted: #56657a; --border: #d2dae7;
+  --ink: #15213a; --on-ink: #f4f7ff; --ink-muted: #b8c7df;
+  --action: #254cd3; --action-hover: #173aa9; --on-action: #ffffff;
+  --accent: #254cd3; --accent-hover: #173aa9; --accent-soft: #e9eefd; --radius: 4px;
+  --shadow: 0 16px 48px #15213a18;
 }

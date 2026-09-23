@@ -13,8 +13,18 @@ import { MilestoneTracker } from './features/milestones/MilestoneTracker';
 import { DemoBar } from './features/demo/DemoBar';
 import { PromptInspector } from './features/prompt-inspector/PromptInspector';
 import './styles/shell.css';
+import './styles/design.css';
 
 const AuthPage = lazy(() => import('./features/auth/AuthPage'));
+const DesignLab = lazy(() => import('./features/design/DesignLab'));
+type DesignTheme = 'signal' | 'atelier' | 'index';
+function savedDesign(): DesignTheme {
+  try {
+    const value = window.localStorage.getItem('ai-sana-design');
+    if (value === 'atelier' || value === 'index') return value;
+  } catch { /* The default remains usable with blocked browser storage. */ }
+  return 'signal';
+}
 
 function isAccountLocation() {
   const url = new URL(window.location.href);
@@ -27,7 +37,7 @@ function isAccountLocation() {
 type Page = ReturnType<typeof useAppStore.getState>['page'];
 const businessNav: [Page,string,string][] = [['overview','Обзор','grid'],['builder','Создать задачу','plus'],['tasks','Мои задачи','folder'],['proposals','Отклики','chat']];
 const studentNav: [Page,string,string][] = [['catalog','Каталог задач','grid'],['recommendations','Рекомендации','spark'],['my-proposals','Мои отклики','chat'],['team','Моя команда','users']];
-function Application({ onAccount }: { onAccount: () => void }) {
+function Application({ onAccount, onDesign }: { onAccount: () => void; onDesign: () => void }) {
   const s = useAppStore();
   function navigate(page: Page) {
     s.setDemoStep(0);
@@ -52,12 +62,12 @@ function Application({ onAccount }: { onAccount: () => void }) {
   return <div className={`app-shell ${s.demoEnabled ? 'with-demo' : ''}`}>
     <a href="#main-content" className="skip-link">Перейти к содержимому</a>
     <aside className="sidebar">
-      <button className="brand" onClick={()=>navigate(s.activeRole==='business'?'overview':'catalog')} aria-label="AI Sana — главная"><span className="brand-mark"><Icon name="leaf" size={26}/></span><span>AI Sana<span className="brand-subtitle">TASKRANK & TEAMMATCH</span></span></button>
+      <button className="brand" onClick={()=>navigate(s.activeRole==='business'?'overview':'catalog')} aria-label="AI Sana — главная"><span className="brand-mark"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M6 8h13l7 8-7 8H6l7-8Z" fill="currentColor"/><path d="m17 8-7 8 7 8" fill="none" stroke="var(--ink)" strokeWidth="2.5"/></svg></span><span>AI Sana<span className="brand-subtitle">ИДЕИ С ПРОДОЛЖЕНИЕМ</span></span></button>
       <div className="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
       <nav aria-label="Основная навигация">{nav.map(([page,title,icon])=><button key={page} className={`nav-item ${s.page===page ? 'active':''}`} aria-current={s.page===page?'page':undefined} onClick={()=>navigate(page)}><Icon name={icon} size={19}/><span>{title}</span>{page==='proposals' && <span className="nav-count">{s.proposals.filter(p=>p.status==='pending').length}</span>}</button>)}</nav>
       <div className="nav-divider"/>
-      <nav aria-label="Инструменты"><button className="nav-item" onClick={onAccount}><Icon name="users" size={19}/><span>Аккаунт</span></button><button className={`nav-item ${s.page==='inspector'?'active':''}`} onClick={()=>navigate('inspector')}><Icon name="code" size={19}/><span>AI Inspector</span></button><button className="nav-item" aria-pressed={s.demoEnabled} onClick={()=>s.setDemoEnabled(!s.demoEnabled)}><Icon name="play" size={19}/><span>Demo Mode</span><span className={`toggle-dot ${s.demoEnabled?'on':''}`}/></button></nav>
-      <div className="sidebar-note"><Icon name="leaf" size={25}/><h3>Идеи становятся делом.</h3><p>Бизнес ставит задачу.<br/>Команды создают решение.</p><span>HACKALEM · AI SANA</span></div>
+      <nav aria-label="Инструменты"><button className="nav-item" onClick={onAccount}><Icon name="users" size={19}/><span>Аккаунт</span></button><button className="nav-item" onClick={onDesign}><Icon name="grid" size={19}/><span>Дизайн-системы</span></button><button className={`nav-item ${s.page==='inspector'?'active':''}`} onClick={()=>navigate('inspector')}><Icon name="code" size={19}/><span>AI Inspector</span></button><button className="nav-item" aria-pressed={s.demoEnabled} onClick={()=>s.setDemoEnabled(!s.demoEnabled)}><Icon name="play" size={19}/><span>Demo Mode</span><span className={`toggle-dot ${s.demoEnabled?'on':''}`}/></button></nav>
+      <div className="sidebar-note"><span className="sidebar-note-index">01 → ∞</span><h3>Одна задача.<br/>Много возможностей.</h3><p>Объединяем опыт бизнеса<br/>и энергию команд.</p><span>HACKALEM · AI SANA</span></div>
       <div className="sidebar-footer"><span className="avatar">{s.activeRole==='business'?'Б':'С'}</span><div><strong>{s.activeRole==='business'?'Бизнес-пространство':'Студенческая команда'}</strong><small>Демонстрационный профиль</small></div></div>
     </aside>
     <div className="main-shell">
@@ -72,9 +82,11 @@ class AppBoundary extends Component<{children:ReactNode},{failed:boolean}> {
   render() { return this.state.failed ? <main className="panel" style={{margin:'10vh auto',maxWidth:600}}><h1>Не удалось открыть экран</h1><p>Перезагрузите приложение. Сохранённые задачи останутся в этом браузере.</p><Button onClick={()=>window.location.reload()}>Перезагрузить</Button></main> : this.props.children; }
 }
 export default function App() {
-  const [accountVisible, setAccountVisible] = useState(isAccountLocation);
+  const [view, setView] = useState<'app' | 'account' | 'design'>(() => window.location.pathname.replace(/\/$/, '') === '/design' ? 'design' : isAccountLocation() ? 'account' : 'app');
+  const [theme, setTheme] = useState<DesignTheme>(savedDesign);
+  useEffect(() => { document.documentElement.dataset.design = theme; }, [theme]);
   useEffect(() => {
-    const onLocationChange = () => setAccountVisible(isAccountLocation());
+    const onLocationChange = () => setView(window.location.pathname.replace(/\/$/, '') === '/design' ? 'design' : isAccountLocation() ? 'account' : 'app');
     window.addEventListener('popstate', onLocationChange);
     window.addEventListener('hashchange', onLocationChange);
     return () => {
@@ -84,9 +96,17 @@ export default function App() {
   }, []);
   function openAccount(visible: boolean) {
     window.history.pushState(window.history.state, '', visible ? '/auth' : '/');
-    setAccountVisible(visible);
+    setView(visible ? 'account' : 'app');
   }
-  return <AppBoundary>{accountVisible
+  function applyDesign(design: DesignTheme) {
+    setTheme(design);
+    try { window.localStorage.setItem('ai-sana-design', design); } catch { /* Current tab still changes theme. */ }
+    openAccount(false);
+  }
+  function openDesign() { window.history.pushState(window.history.state, '', '/design'); setView('design'); }
+  return <AppBoundary>{view === 'design'
+    ? <Suspense fallback={<main className="panel" role="status">Открываем дизайн-системы…</main>}><DesignLab onBack={() => openAccount(false)} onApply={applyDesign} /></Suspense>
+    : view === 'account'
     ? <Suspense fallback={<main className="panel" role="status"><p>Открываем аккаунт…</p><Button onClick={() => openAccount(false)}>Открыть демо</Button></main>}><AuthPage onDemo={() => openAccount(false)} /></Suspense>
-    : <Application onAccount={() => openAccount(true)} />}</AppBoundary>;
+    : <Application onAccount={() => openAccount(true)} onDesign={openDesign} />}</AppBoundary>;
 }

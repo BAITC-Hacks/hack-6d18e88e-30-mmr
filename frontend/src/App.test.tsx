@@ -117,3 +117,49 @@ describe('account entry within the full demo platform', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe('design preview and workspace continuity', () => {
+  it('applies and restores a theme without replacing tasks, team or workspace', async () => {
+    useAppStore.getState().setActiveRole('student');
+    useAppStore.getState().navigate('team');
+    const before = useAppStore.getState();
+    const taskIds = before.tasks.map(task => task.id);
+    const proposalIds = before.proposals.map(proposal => proposal.id);
+    await mount('/design');
+    for (let attempt = 0; attempt < 100 && !container.querySelector('[data-theme-choice="atelier"]'); attempt++) {
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+    }
+    const choice = container.querySelector<HTMLButtonElement>('[data-theme-choice="atelier"]');
+    expect(choice).not.toBeNull();
+    await act(async () => choice!.click());
+    const apply = container.querySelector<HTMLButtonElement>('[data-apply-design]');
+    expect(apply).not.toBeNull();
+    await act(async () => apply!.click());
+    expect(window.location.pathname).toBe('/');
+    expect(container.querySelector('.app-shell')).not.toBeNull();
+    expect(document.documentElement.dataset.design).toBe('atelier');
+    expect(localStorage.getItem('ai-sana-design')).toBe('atelier');
+    expect(useAppStore.getState().tasks.map(task => task.id)).toEqual(taskIds);
+    expect(useAppStore.getState().proposals.map(proposal => proposal.id)).toEqual(proposalIds);
+    expect(useAppStore.getState().activeTeamId).toBe(before.activeTeamId);
+    expect(useAppStore.getState().page).toBe('team');
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    await mount();
+    expect(document.documentElement.dataset.design).toBe('atelier');
+    expect(auth.initialize).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns from design previews with browser navigation', async () => {
+    await mount();
+    await clickButton('Дизайн-системы');
+    expect(window.location.pathname).toBe('/design');
+    await act(async () => {
+      window.history.replaceState(null, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(container.querySelector('.app-shell')).not.toBeNull();
+    expect(useAppStore.getState().page).toBe('overview');
+  });
+});

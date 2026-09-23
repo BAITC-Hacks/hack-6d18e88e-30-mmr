@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; font-size: 14px; line-height: 1.55; }
-button, input, select, textarea { font: inherit; }
+:where(button, input, select, textarea) { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .55; }
 a { color: var(--accent); text-underline-offset: 3px; }
@@ -37,7 +37,7 @@ svg { flex-shrink: 0; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .field { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 600; }
 .field label { display: flex; justify-content: space-between; gap: 10px; }
-input:not([type=checkbox]):not([type=radio]),select,textarea { color: var(--text); background: #fff; border: 1px solid #cdd6cc; border-radius: 8px; padding: 11px 12px; min-width: 0; width: 100%; font-size: 14px; font-weight: 400; }
+:where(input:not([type=checkbox]):not([type=radio]),select,textarea) { color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 11px 12px; min-width: 0; width: 100%; font-size: 14px; font-weight: 400; }
 input::placeholder,textarea::placeholder { color: #7d877f; }
 textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 input[type=checkbox] { accent-color: var(--accent); width: 17px; height: 17px; }
