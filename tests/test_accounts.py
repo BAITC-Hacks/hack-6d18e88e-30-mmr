@@ -203,7 +203,9 @@ def test_file_delivery_is_preview_not_sent_and_does_not_duplicate(client):
     files = list(settings.mail_directory.glob("*.eml"))
     assert len(files) == 1
     message = BytesParser(policy=policy.default).parsebytes(files[0].read_bytes())
-    assert "#verify=" in message.get_content()
+    assert "#verify=" in message.get_body(preferencelist=("plain",)).get_content()
+    html = message.get_body(preferencelist=("html",)).get_content()
+    assert "#verify=" in html and "AI SANA" in html
     assert message["To"] == "person@example.com"
     with connect(settings) as db:
         row = db.execute("SELECT * FROM outbox").fetchone()
@@ -261,6 +263,9 @@ def test_health_account_and_existing_ai_contract(client):
     assert "script-src 'self'" in page.headers["content-security-policy"]
     assert client.get("/account.js").status_code == 200
     assert client.get("/account.css").status_code == 200
+    assert client.get("/email-preview/recovery").status_code == 200
+    assert client.get("/email-preview/confirmation").status_code == 200
+    assert client.get("/email-preview/unknown").status_code == 422
     assert client.get("/api/auth/me").headers["cache-control"] == "no-store"
     result = client.post("/api/ai/analyze", json={"draft": "A test draft"})
     assert result.json()["provider"] == "stub"

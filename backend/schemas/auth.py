@@ -45,7 +45,7 @@ class PreferencesRequest(InputModel):
 
 
 class UserResponse(BaseModel):
-    id: int
+    id: int | str
     email: str
     full_name: str
     role: Literal["student", "business", "admin"]

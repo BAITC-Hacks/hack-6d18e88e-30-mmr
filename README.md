@@ -21,6 +21,9 @@ AI:
 
 ## Development
 
+Account UI, Supabase profiles and email setup: [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).
+Local backend and mail commands: [backend/README.md](backend/README.md).
+
 ### Frontend
 ```bash
 cd frontend

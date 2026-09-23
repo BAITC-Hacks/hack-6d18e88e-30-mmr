@@ -1,0 +1,241 @@
+.sana-auth {
+  --sana-ink: #18392e;
+  --sana-muted: #68725f;
+  --sana-border: #dedfd4;
+  --sana-paper: #faf9f5;
+  --sana-green: #204e3b;
+  --sana-lime: #d9edab;
+  display: grid;
+  grid-template-columns: minmax(420px, 46%) minmax(0, 1fr);
+  width: 100%;
+  min-height: 100svh;
+  color: var(--sana-ink);
+  background: var(--sana-paper);
+  font: 14px/1.5 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  text-align: left;
+  letter-spacing: 0;
+  color-scheme: light;
+}
+.sana-auth *, .sana-auth *::before, .sana-auth *::after { box-sizing: border-box; }
+.sana-auth button, .sana-auth input { font: inherit; }
+.sana-auth button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sana-auth button:disabled { cursor: default; opacity: .55; }
+.sana-auth button:focus-visible, .sana-auth a:focus-visible, .sana-auth input:focus-visible { outline: 3px solid #95b764; outline-offset: 4px; }
+.sana-auth p, .sana-auth h1, .sana-auth h2, .sana-auth h3 { margin: 0; }
+.sana-auth .sana-icon { display: inline-block; flex: 0 0 auto; vertical-align: middle; }
+.sana-skip { position: fixed; top: 10px; left: 10px; z-index: 20; transform: translateY(-160%); background: var(--sana-lime); color: var(--sana-ink); padding: 12px 20px; border-radius: 6px; }
+.sana-skip:focus { transform: translateY(0); }
+.sana-story { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 38px clamp(32px, 4.3vw, 70px) 32px; color: #f4f6e9; background: #183e30; }
+.sana-story::before { content: ''; position: absolute; width: 580px; height: 580px; border: 1px solid #bad89110; border-radius: 50%; top: -340px; left: -100px; box-shadow: 0 0 0 60px #bad89105, 0 0 0 120px #bad89103; pointer-events: none; }
+.sana-brand { display: flex; align-items: center; gap: 12px; position: relative; font-size: 27px; letter-spacing: -.9px; font-weight: 600; white-space: nowrap; }
+.sana-brand-dot { color: #d9edab; }
+.sana-brand-mark { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: 31px; height: 31px; transform: rotate(-6deg); }
+.sana-brand-mark i { background: #d9edab; border-radius: 7px 2px 7px 2px; }
+.sana-brand-mark i:nth-child(2) { opacity: .5; transform: rotate(90deg); }
+.sana-brand-mark i:nth-child(3) { opacity: .7; transform: rotate(90deg); }
+.sana-brand-product { border-left: 1px solid #d9edab40; padding-left: 16px; margin-left: 7px; color: #b4c5b7; font-size: 10px; line-height: 1.5; font-weight: 400; letter-spacing: .4px; }
+.sana-story-main { position: relative; margin: 62px 0 38px; }
+.sana-eyebrow { display: flex; align-items: center; gap: 9px; color: #bfd5b0; font-size: 9px; letter-spacing: 1.8px; font-weight: 600; }
+.sana-eyebrow > span { width: 6px; height: 6px; border-radius: 100%; background: #d9edab; box-shadow: 0 0 0 4px #d9edab0d; }
+.sana-story h1 { margin: 22px 0 22px; color: #fafbf1; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(38px, 4.2vw, 66px); font-weight: 400; line-height: 1.1; letter-spacing: -2px; }
+.sana-story h1 em { color: #d9edab; font-weight: 400; }
+.sana-story-copy { color: #b5c7ba; font-size: 14px; line-height: 1.9; }
+.sana-journey { position: relative; height: 285px; margin: 32px -12px 0; isolation: isolate; }
+.sana-journey-grid { position: absolute; inset: 12px 0 0; z-index: -1; background-image: radial-gradient(#cadbb12b .75px, transparent .75px); background-size: 19px 19px; mask-image: radial-gradient(ellipse at center, black, transparent 72%); }
+.sana-journey-path { position: absolute; inset: 0; height: 100%; width: 100%; color: #b6d59767; }
+.sana-orbit { position: absolute; border: 1px solid #d5e8b322; border-radius: 50%; z-index: -1; }
+.sana-orbit--one { width: 250px; height: 250px; left: calc(50% - 125px); top: 5px; }
+.sana-orbit--two { width: 195px; height: 195px; left: calc(50% - 98px); top: 32px; }
+.sana-idea-card { position: absolute; left: 12%; top: 33px; width: 236px; min-height: 161px; border: 1px solid #eef3df42; border-radius: 12px; padding: 19px 21px; background: #f2f2df; color: #264b37; transform: rotate(-7deg); box-shadow: 0 17px 40px #06190f20; }
+.sana-card-overline { display: block; font-size: 8px; font-weight: 600; letter-spacing: 1.2px; color: #768367; }
+.sana-card-icon { position: absolute; right: 19px; top: 16px; color: #779258; }
+.sana-idea-card > strong { display: block; margin: 20px 0 5px; font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: 23px; letter-spacing: -.5px; }
+.sana-idea-card > span:not([class]) { font-size: 9px; color: #7c846f; }
+.sana-card-line { display: flex; gap: 4px; margin-top: 17px; }
+.sana-card-line i { height: 5px; background: #52764b; border-radius: 8px; width: 26%; }
+.sana-card-line i:nth-child(2) { background: #a8bd87; width: 21%; }
+.sana-card-line i:nth-child(3) { background: #d9debf; width: 45%; }
+.sana-team-card { position: absolute; right: 3%; bottom: 34px; width: 258px; min-height: 77px; padding: 16px; display: flex; align-items: center; gap: 11px; border-radius: 11px; background: #d9edab; color: #294a31; transform: rotate(5deg); box-shadow: 0 12px 38px #06190f30; }
+.sana-team-symbol { width: 38px; height: 38px; background: #294a3110; border: 1px solid #294a3117; display: grid; place-items: center; border-radius: 50%; }
+.sana-team-card strong, .sana-team-card span:not([class]) { display: block; }
+.sana-team-card strong { font-weight: 600; font-size: 12px; }
+.sana-team-card span:not([class]) { font-size: 9px; color: #627343; margin-top: 3px; }
+.sana-team-arrow { margin-left: auto; font-size: 24px; font-weight: 300; }
+.sana-spark { position: absolute; right: 10%; top: 10px; color: #d9edab; font-size: 58px; font-weight: 300; line-height: 1; }
+.sana-story-footer { display: flex; align-items: center; gap: 15px; color: #c0d0bf; font-size: 10px; }
+.sana-story-footer b { margin-right: 7px; font-size: 9px; font-weight: 400; color: #84a183; }
+.sana-story-footer i { width: 26px; height: 1px; background: #84a18360; }
+.sana-right { display: flex; flex-direction: column; min-width: 0; }
+.sana-topbar { min-height: 92px; padding: 25px 40px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.sana-topbar-label { font-size: 10px; letter-spacing: 1.8px; color: var(--sana-muted); }
+.sana-mobile-brand { display: none; }
+.sana-text-button { border: 0; background: none; padding: 0; color: var(--sana-green); font-size: 12px; font-weight: 600; line-height: 1.5; text-decoration: none; }
+.sana-text-button:hover:not(:disabled) { color: #608141; text-decoration: underline; text-underline-offset: 4px; }
+.sana-demo-button { font-size: 11px; font-weight: 500; white-space: nowrap; }
+.sana-demo-button span { padding-left: 7px; font-size: 18px; }
+.sana-main { display: flex; flex: 1; justify-content: center; align-items: center; padding: 36px 44px 55px; }
+.sana-form-container { width: 100%; max-width: 400px; animation: sana-enter .4s ease-out; }
+.sana-tabs { display: flex; gap: 0; margin: 0 0 35px; width: fit-content; border-bottom: 1px solid #e1e3d9; }
+.sana-tabs button { position: relative; padding: 9px 0 11px; margin-right: 27px; border: 0; background: transparent; color: var(--sana-muted); font-size: 13px; }
+.sana-tabs button:last-child { margin-right: 0; }
+.sana-tabs button[aria-pressed='true'] { color: #294d37; font-weight: 600; }
+.sana-tabs button[aria-pressed='true']::after { content: ''; position: absolute; height: 2px; background: #35573c; inset: auto 0 -1px; }
+.sana-form-eyebrow { font-size: 10px; letter-spacing: 1.9px; color: var(--sana-muted); font-weight: 600; }
+.sana-form-heading h2 { color: var(--sana-ink); font-family: Georgia, 'Times New Roman', serif; font-size: clamp(32px, 3vw, 43px); line-height: 1.18; font-weight: 400; letter-spacing: -1.1px; margin: 10px 0 12px; outline: none; }
+.sana-form-heading > p:last-child:not(.sana-form-eyebrow) { color: var(--sana-muted); font-size: 12px; line-height: 1.8; }
+.sana-form-heading { margin-bottom: 28px; }
+.sana-form { display: flex; flex-direction: column; gap: 19px; }
+.sana-field { display: flex; flex-direction: column; gap: 7px; }
+.sana-field > label, .sana-role-field legend { font-size: 12px; font-weight: 600; color: #3b5040; }
+.sana-input-wrap { display: flex; align-items: center; position: relative; }
+.sana-input-wrap > .sana-icon { position: absolute; left: 15px; width: 17px; height: 17px; color: #889681; pointer-events: none; }
+.sana-input-wrap input { width: 100%; height: 50px; border-radius: 7px; border: 1px solid var(--sana-border); background: #fdfcf9; padding: 0 45px 0 42px; color: #243c2e; font-size: 13px; transition: border-color .15s, box-shadow .15s; }
+.sana-input-wrap input::placeholder { color: #a2a79c; opacity: 1; }
+.sana-input-wrap input:focus { outline: none; border-color: #859d69; box-shadow: 0 0 0 3px #6f91400d; background: #fffefb; }
+.sana-input-wrap input:disabled { background: #f1f1eb; }
+.sana-eye { position: absolute; display: grid; place-items: center; right: 4px; top: 5px; width: 40px; height: 40px; background: none; border: 0; color: #8a947f; padding: 0; border-radius: 5px; }
+.sana-eye:hover { color: var(--sana-green); }
+.sana-eye .sana-icon { width: 17px; height: 17px; }
+.sana-field-hint { font-size: 11px; color: var(--sana-muted); line-height: 1.6; }
+.sana-forgot-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: -6px; }
+.sana-forgot-row > span { font-size: 10px; color: var(--sana-muted); }
+.sana-forgot-row > span .sana-icon { width: 12px; height: 12px; margin-right: 4px; }
+.sana-forgot-row .sana-text-button { font-size: 11px; }
+.sana-primary, .sana-secondary { display: flex; justify-content: center; align-items: center; gap: 12px; width: 100%; min-height: 49px; border: 1px solid transparent; border-radius: 7px; padding: 12px 18px; font-size: 12px; font-weight: 600; transition: background .18s, transform .18s, box-shadow .18s; }
+.sana-primary { background: var(--sana-green); color: #f9faed; box-shadow: 0 3px 0 #183b2d12; }
+.sana-primary > .sana-icon { width: 17px; height: 17px; }
+.sana-primary:hover:not(:disabled) { background: #2b6148; box-shadow: 0 5px 14px #15322116; transform: translateY(-1px); }
+.sana-primary:active:not(:disabled) { transform: translateY(0); }
+.sana-secondary { background: transparent; border-color: #d1d7c6; color: #365039; }
+.sana-secondary:hover:not(:disabled) { background: #eef1e6; }
+.sana-alternate { padding-top: 26px; margin-top: 29px !important; border-top: 1px solid #e4e5da; color: var(--sana-muted); font-size: 12px; text-align: center; }
+.sana-alternate .sana-text-button { margin-left: 4px; font-size: 11px; }
+.sana-footer { display: flex; justify-content: space-between; gap: 16px; padding: 24px 40px; font-size: 10px; color: var(--sana-muted); }
+.sana-main--register { padding-top: 14px; padding-bottom: 30px; }
+.sana-main--register .sana-tabs { margin-bottom: 23px; }
+.sana-main--register .sana-form-heading { margin-bottom: 21px; }
+.sana-main--register .sana-form { gap: 14px; }
+.sana-main--register .sana-alternate { padding-top: 18px; margin-top: 22px !important; }
+.sana-role-field { padding: 0; margin: 0 0 2px; border: 0; min-width: 0; }
+.sana-role-field legend { margin-bottom: 9px; padding: 0; }
+.sana-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sana-role { position: relative; padding: 12px 10px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--sana-border); background: #fdfcf9; border-radius: 7px; cursor: pointer; }
+.sana-role > input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.sana-role:has(input:focus-visible) { outline: 3px solid #95b764; outline-offset: 3px; }
+.sana-role.is-selected { border-color: #96aa7b; background: #eff3e6; }
+.sana-role > .sana-icon { color: #688157; width: 19px; height: 19px; }
+.sana-role strong { font-size: 11px; font-weight: 600; display: block; }
+.sana-role small { display: block; font-size: 10px; color: #616f53; margin-top: 2px; }
+.sana-role > i { margin-left: auto; width: 13px; height: 13px; border-radius: 50%; border: 1px solid #c8d0be; display: grid; place-items: center; flex-shrink: 0; }
+.sana-role.is-selected > i { color: #f9faed; background: #60814e; border-color: #60814e; }
+.sana-role > i .sana-icon { width: 9px; height: 9px; stroke-width: 3px; }
+.sana-checkbox { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; font-size: 11px; color: #53614c; line-height: 1.55; }
+.sana-checkbox input { width: 15px; height: 15px; margin: 1px 0 0; flex-shrink: 0; accent-color: #315c3c; cursor: pointer; }
+.sana-checkbox small { display: block; margin-top: 4px; font-size: 11px; color: var(--sana-muted); line-height: 1.6; }
+.sana-message { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 7px; border: 1px solid; margin-bottom: 20px; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.sana-message > span { border: 1px solid currentColor; border-radius: 50%; min-width: 16px; width: 16px; height: 16px; display: grid; place-items: center; font-size: 11px; margin-top: 2px; }
+.sana-message .sana-icon { width: 16px; height: 16px; margin-top: 2px; }
+.sana-message--error { color: #985144; border-color: #ead5ca; background: #fff3ed; }
+.sana-message--success { color: #4f6a3c; border-color: #d8e2c8; background: #f0f5e8; }
+.sana-back { display: flex; align-items: center; gap: 8px; color: var(--sana-muted); border: 0; background: none; padding: 6px 0; margin: 0 0 25px; font-size: 12px; }
+.sana-back .sana-icon { width: 15px; height: 15px; }
+.sana-back:hover { color: var(--sana-green); }
+.sana-state-icon { width: 57px; height: 57px; background: #edf0e3; color: #6b8555; display: grid; place-items: center; border: 1px solid #dfe6d0; border-radius: 15px; margin-bottom: 24px; transform: rotate(-5deg); }
+.sana-state-icon .sana-icon { width: 26px; height: 26px; transform: rotate(5deg); }
+.sana-state-icon--success { background: #dfecc9; color: #557842; border-color: #d0dfb8; }
+.sana-sent > p { color: var(--sana-muted); font-size: 12px; line-height: 1.8; }
+.sana-recipient { display: flex; align-items: center; gap: 9px; margin: 14px 0 23px; color: #4c6542; }
+.sana-recipient .sana-icon { width: 16px; height: 16px; }
+.sana-recipient strong { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.sana-mail-preview { border-radius: 9px; border: 1px solid #e0e3d6; background: #fefdfa; padding: 20px; box-shadow: 0 6px 16px #233a2804; }
+.sana-mail-preview-heading { display: flex; align-items: center; gap: 10px; padding-bottom: 15px; margin-bottom: 14px; border-bottom: 1px solid #eceee4; }
+.sana-mail-avatar { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 7px; color: #d9edab; background: #28513b; font-family: Georgia, serif; font-style: italic; font-size: 21px; }
+.sana-mail-preview-heading strong, .sana-mail-preview-heading div > span { display: block; }
+.sana-mail-preview-heading strong { font-size: 11px; font-weight: 600; }
+.sana-mail-preview-heading div > span { font-size: 10px; color: var(--sana-muted); margin-top: 2px; }
+.sana-mail-preview > p { font-size: 12px; color: #415b38; font-weight: 600; }
+.sana-mail-preview > span { display: block; margin-top: 7px; font-size: 11px; color: var(--sana-muted); }
+.sana-sent .sana-delivery-note { margin: 20px 0; font-size: 11px; }
+.sana-centered { display: block; margin: 17px auto 0; font-size: 11px; }
+.sana-resend-inline { font-size: 11px; }
+.sana-recovery-retry { margin-bottom: 22px; }
+.sana-loading { text-align: center; color: var(--sana-muted); font-size: 12px; }
+.sana-loading > .sana-spinner { width: 27px; height: 27px; margin-bottom: 15px; }
+.sana-spinner { display: inline-block; width: 16px; height: 16px; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sana-spin .8s linear infinite; }
+.sana-profile-card { display: flex; align-items: center; gap: 15px; padding: 21px; border: 1px solid #dce2d0; border-radius: 10px; background: #f0f3e9; }
+.sana-avatar { display: grid; place-items: center; width: 52px; height: 52px; flex-shrink: 0; border-radius: 50%; font-size: 25px; font-family: Georgia, serif; color: #d9edab; background: #345b3f; }
+.sana-profile-card > div:last-child { min-width: 0; }
+.sana-profile-card strong { display: block; color: #365335; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.sana-profile-card span { display: block; font-size: 12px; color: #616f53; margin-top: 3px; overflow-wrap: anywhere; }
+.sana-profile-card small { display: inline-block; padding: 2px 7px; font-size: 9px; background: #e2e9d5; color: #637a4e; margin-top: 9px; border-radius: 4px; }
+.sana-verified-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--sana-muted); margin: 13px 0 27px; }
+.sana-verified-status .sana-icon { width: 14px; height: 14px; }
+.sana-preferences { padding: 24px 0; border-top: 1px solid #e1e4d7; border-bottom: 1px solid #e1e4d7; }
+.sana-preferences h3 { font-size: 12px; color: #4d6142; font-weight: 600; margin-bottom: 15px; }
+.sana-preferences .sana-secondary { margin-top: 19px; min-height: 41px; font-size: 11px; }
+.sana-profile-reset { width: 100%; display: flex; align-items: center; gap: 8px; padding: 20px 0; font-size: 11px; font-weight: 500; }
+.sana-profile-reset .sana-icon { width: 15px; height: 15px; }
+.sana-profile-reset .sana-icon:last-child { margin-left: auto; }
+.sana-logout { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: transparent; border: 1px solid #e2e4da; border-radius: 7px; color: var(--sana-muted); padding: 11px 15px; font-size: 12px; }
+.sana-logout .sana-icon { width: 15px; height: 15px; }
+.sana-logout:hover:not(:disabled) { background: #f1f2ea; color: #4e6342; }
+@keyframes sana-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes sana-spin { to { transform: rotate(360deg); } }
+@media (min-width: 1600px) {
+  .sana-story { padding: 45px 80px; }
+  .sana-story-main { max-width: 560px; align-self: center; width: 100%; }
+  .sana-form-container { max-width: 440px; }
+  .sana-story-copy { font-size: 16px; }
+  .sana-journey { margin-top: 48px; }
+}
+@media (max-width: 1100px) {
+  .sana-auth { grid-template-columns: minmax(340px, 44%) minmax(0, 1fr); }
+  .sana-story { padding: 32px; }
+  .sana-story h1 { font-size: 44px; }
+  .sana-brand-product { display: none; }
+  .sana-idea-card { left: 4%; }
+  .sana-team-card { right: 0; width: 230px; }
+  .sana-story-main { margin-top: 46px; }
+  .sana-story-copy { font-size: 12px; }
+  .sana-eyebrow { font-size: 8px; letter-spacing: 1.4px; }
+  .sana-main { padding-right: 34px; padding-left: 34px; }
+  .sana-topbar, .sana-footer { padding-right: 28px; padding-left: 28px; }
+  .sana-footer > span:last-child { display: none; }
+}
+@media (max-width: 820px) {
+  .sana-auth { grid-template-columns: 1fr; }
+  .sana-story { display: none; }
+  .sana-right { min-height: 100svh; }
+  .sana-mobile-brand { display: block; }
+  .sana-brand--compact { font-size: 22px; gap: 9px; }
+  .sana-brand--compact .sana-brand-mark { width: 26px; height: 26px; }
+  .sana-brand--compact .sana-brand-mark i { background: #45653d; }
+  .sana-brand--compact .sana-brand-dot { color: #7c9653; }
+  .sana-topbar { padding: 24px 30px; min-height: 83px; border-bottom: 1px solid #e7e8dc; }
+  .sana-topbar-label { display: none; }
+  .sana-main { padding-top: 45px; padding-bottom: 55px; }
+  .sana-main--register { padding-top: 28px; }
+  .sana-form-heading h2 { font-size: 40px; }
+  .sana-footer { justify-content: center; padding: 23px; }
+}
+@media (max-width: 420px) {
+  .sana-main { padding-left: 22px; padding-right: 22px; }
+  .sana-topbar { padding: 22px; }
+  .sana-form-heading h2 { font-size: 35px; }
+  .sana-role { padding: 11px 8px; gap: 6px; }
+  .sana-role > .sana-icon { width: 17px; height: 17px; }
+  .sana-role small { font-size: 8px; }
+  .sana-forgot-row > span { font-size: 9px; }
+  .sana-profile-card { padding: 17px; gap: 11px; }
+}
+@media (max-width: 350px) {
+  .sana-main { padding-left: 17px; padding-right: 17px; }
+  .sana-topbar { padding-left: 17px; padding-right: 17px; }
+  .sana-form-heading h2 { font-size: 32px; }
+  .sana-forgot-row > span { display: none; }
+  .sana-forgot-row { justify-content: flex-end; }
+  .sana-role > .sana-icon { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sana-auth *, .sana-auth *::before, .sana-auth *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
