@@ -1,2 +1,15 @@
-skills/
+env
 .env
+.env.local
+skills/
+node_modules/
+dist/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+coverage/
+.pytest_cache/
