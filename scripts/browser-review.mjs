@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Local browser review. Requests that could mutate data or contact external
-// services are blocked before the page starts; no user browser profile is used.
+// Local browser review with an isolated browser profile. The optional audit
+// scenario permits only same-origin AI requests against the launcher's fixture.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const options = { url: 'http://localhost:5173', width: 1440, height: 1000, out: 'baseline', clicks: [] };
 const args = process.argv.slice(2);
@@ -18,6 +18,7 @@ for (let index = 0; index < args.length; index += 2) {
   else if (flag === '--width' || flag === '--height') options[flag.slice(2)] = Number(value);
   else if (flag === '--out') options.out = value;
   else if (flag === '--click') options.clicks.push(value);
+  else if (flag === '--scenario' && value === 'audit') options.scenario = value;
   else throw new Error(`Unknown option ${flag}`);
 }
 for (const dimension of ['width', 'height']) {
@@ -47,6 +48,7 @@ let sessionId;
 const pending = new Map();
 const blockedRequests = new Map();
 const pageErrors = [];
+const apiResponses = [];
 let command;
 let deadline;
 let childExited = false;
@@ -111,7 +113,10 @@ try {
       else item.resolve(message.result || {});
     } else if (message.method === 'Fetch.requestPaused') {
       const { requestId, request } = message.params;
-      const allowed = request.method === 'GET' && (isLocal(request.url) || request.url.startsWith('data:'));
+      const aiRequest = options.scenario === 'audit' && request.method === 'POST'
+        && new URL(request.url).origin === new URL(options.url).origin
+        && /^\/api\/ai\/(analyze|clarify)$/.test(new URL(request.url).pathname);
+      const allowed = aiRequest || request.method === 'GET' && (isLocal(request.url) || request.url.startsWith('data:'));
       if (!allowed) {
         // Record the origin only: URLs and request headers may contain tokens.
         let origin = 'non-http';
@@ -124,9 +129,15 @@ try {
         .catch(() => {});
     } else if (message.method === 'Runtime.exceptionThrown') {
       pageErrors.push(message.params.exceptionDetails.text);
+    } else if (message.method === 'Network.responseReceived') {
+      const { response } = message.params;
+      const url = new URL(response.url);
+      if (url.origin === new URL(options.url).origin && url.pathname.startsWith('/api/')) {
+        apiResponses.push({ path: url.pathname, status: response.status });
+      }
     }
   });
-  deadline = setTimeout(() => { socket.close(); chrome.kill(); }, 45000);
+  deadline = setTimeout(() => { socket.close(); chrome.kill(); }, options.scenario ? 120000 : 45000);
   const { targetId } = await command('Target.createTarget', { url: 'about:blank' }, null);
   ({ sessionId } = await command('Target.attachToTarget', { targetId, flatten: true }, null));
   await command('Page.enable');
@@ -155,6 +166,11 @@ try {
     await evaluate(`(() => { const element = document.querySelector(${JSON.stringify(selector)}); if (!element) throw new Error('Click selector not found'); element.click(); return true; })()`);
     await delay(350);
   }
+  let scenarioReport;
+  if (options.scenario === 'audit') {
+    const { auditBrowser } = await import('../tests/browser_audit_scenario.mjs');
+    scenarioReport = await auditBrowser({ evaluate, command, delay, outputDirectory, name: options.out });
+  }
   const metrics = await evaluate(`(() => {
     const viewport = { width: innerWidth, height: innerHeight };
     const overflowing = [...document.querySelectorAll('body *')].flatMap((element) => {
@@ -168,7 +184,7 @@ try {
     return { title: document.title, pathname: location.pathname, viewport,
       documentWidth: document.documentElement.scrollWidth,
       documentHeight: document.documentElement.scrollHeight,
-      horizontalOverflow: document.documentElement.scrollWidth > innerWidth + 1,
+      horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
       headings: [...document.querySelectorAll('h1,h2')].map((element) => element.textContent.trim()).slice(0, 20),
       overflowing,
       brokenImages: [...document.images].filter((element) => element.complete && !element.naturalWidth).length };
@@ -177,9 +193,12 @@ try {
   const screenshotPath = path.join(outputDirectory, `${options.out}.png`);
   const metricsPath = path.join(outputDirectory, `${options.out}.json`);
   await writeFile(screenshotPath, Buffer.from(data, 'base64'));
-  const report = { ...metrics, pageErrors, blockedRequests: Object.fromEntries(blockedRequests) };
+  const report = { ...metrics, pageErrors, apiResponses, blockedRequests: Object.fromEntries(blockedRequests), scenarioReport };
   await writeFile(metricsPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-  console.log(JSON.stringify({ screenshotPath, metricsPath, ...report }, null, 2));
+  console.log(JSON.stringify({ screenshotPath, metricsPath, ...report,
+    scenarioReport: scenarioReport ? { checks: scenarioReport.checks, screenshots: scenarioReport.screenshots.length } : undefined }, null, 2));
+  if (pageErrors.length || metrics.horizontalOverflow || metrics.brokenImages) process.exitCode = 1;
+  if (options.scenario && !apiResponses.some(response => response.path === '/api/ai/analyze' && response.status === 200)) process.exitCode = 1;
 } finally {
   clearTimeout(deadline);
   if (socket?.readyState === WebSocket.OPEN && command) {

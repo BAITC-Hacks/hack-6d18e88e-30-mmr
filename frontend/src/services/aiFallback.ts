@@ -2,6 +2,37 @@ import type { AiDraftAnalysis, GenerateCardPayload } from '../types/ai';
 import type { Task } from '../types/task';
 import { cardFields, type CardField } from './aiSchemas';
 import { assertTaskScope, getClarificationQuestion } from './aiScope';
+import fallbackPolicy from '../../../shared/aiFallbackPolicy.json';
+
+const retiredContactPattern = new RegExp(fallbackPolicy.retiredContactPattern, 'iu');
+const phoneLabelPattern = new RegExp(fallbackPolicy.phoneLabelPattern, 'iu');
+const negationPattern = new RegExp(fallbackPolicy.negationPattern, 'iu');
+
+/** Short positive excerpts remain valid; preserve the clause around a negation. */
+export function isSupportedExcerpt(text: string, excerpt: string, preserveContext = true): boolean {
+  const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+  const quoted = normalize(excerpt);
+  if (!normalize(text).includes(quoted)) return false;
+  if (!preserveContext) return true;
+  const containing = text.split(/(?<=[.!?])\s+|[\n;]+/).map(normalize).filter(part => part.includes(quoted));
+  const withoutPunctuation = (value: string) => value.replace(/[.!?]+$/, '');
+  return !containing.length || containing.some(part => !negationPattern.test(part) ||
+    withoutPunctuation(part) === withoutPunctuation(quoted));
+}
+
+function extractContact(sentences: string[]): string | undefined {
+  for (const sentence of sentences) {
+    // Marker words inside an address/handle are data, e.g. old@example.com.
+    const surroundingText = sentence.replace(new RegExp(fallbackPolicy.contactPattern, 'giu'), ' ');
+    if (retiredContactPattern.test(surroundingText)) continue;
+    for (const match of sentence.matchAll(new RegExp(fallbackPolicy.contactPattern, 'giu'))) {
+      const value = match[0];
+      // A long order/account number alone is not evidence of a phone contact.
+      if (value.includes('@') || value.startsWith('+') || phoneLabelPattern.test(sentence)) return value;
+    }
+  }
+  return undefined;
+}
 
 const questions = [
   'context', 'need', 'availableData', 'successCriteria', 'expectedResult',
@@ -23,14 +54,14 @@ const patterns: Partial<Record<CardField, RegExp>> = {
 export function localAnalyzeDraft(draft: string): AiDraftAnalysis {
   assertTaskScope(draft);
   const text = draft.trim();
-  const sentences = text.split(/(?<=[.!?])\s+|\r?\n+/).filter(Boolean);
+  const sentences = text.split(/(?<=[.!?])\s+|[\n;]+/).map(value => value.trim()).filter(Boolean);
   const detectedFields: AiDraftAnalysis['detectedFields'] = {};
   if (text) detectedFields.title = { value: (sentences[0] || text).slice(0, 60), source: 'draft' };
   for (const [field, pattern] of Object.entries(patterns)) {
     const sentence = sentences.find(value => pattern.test(value));
     if (sentence) detectedFields[field] = { value: sentence, source: 'draft' };
   }
-  const contact = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|@[a-zA-Z0-9_]+|\+?[0-9]{10,}/)?.[0];
+  const contact = extractContact(sentences);
   if (contact) detectedFields.contact = { value: contact, source: 'draft' };
   const missingFields = cardFields.filter(field => !detectedFields[field]);
   const selected = questions.filter(q => missingFields.includes(q.field as CardField)).slice(0, 4);

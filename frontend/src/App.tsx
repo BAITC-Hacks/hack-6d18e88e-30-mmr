@@ -39,6 +39,12 @@ const businessNav: [Page,string,string][] = [['overview','Обзор','grid'],['
 const studentNav: [Page,string,string][] = [['catalog','Каталог задач','grid'],['recommendations','Рекомендации','spark'],['my-proposals','Мои отклики','chat'],['team','Моя команда','users']];
 function Application({ onAccount, onDesign }: { onAccount: () => void; onDesign: () => void }) {
   const s = useAppStore();
+  const screen = `${s.activeRole}:${s.page}:${s.page === 'builder' ? s.activeTaskId : s.page === 'proposals' && s.demoStep === 8 ? 'milestones' : ''}`;
+  useEffect(() => {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    document.getElementById('main-content')?.focus({ preventScroll: true });
+  }, [screen]);
   function navigate(page: Page) {
     s.setDemoStep(0);
     if (page === 'builder') { const task = createEmptyTask(); s.addTask(task); s.setActiveTask(task.id); }

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AiRequestError, analyzeDraft, createClarificationQuestions, useAiInspectorStore } from '../src/services/aiClient.ts';
 import { getClarificationQuestion } from '../src/services/aiScope.ts';
+import { parseStrictAiJson } from '../src/services/aiJson.ts';
 
 const realFetch = globalThis.fetch;
 const draft = 'Менеджеры вручную сверяют остатки и хотят сократить время работы.';
@@ -168,4 +169,105 @@ test('clearing inspector invalidates an in-flight inspection', async () => {
   release(Response.json({ detectedFields: {}, missingFields: [], questions: createClarificationQuestions([]), fallbackUsed: true, provider: 'local-fallback-nlp' }));
   await pending;
   assert.equal(useAiInspectorStore.getState().latest, null);
+});
+
+test('oversized decoded streams are cancelled without retaining body data', async () => {
+  let cancelled = false;
+  let chunks = 0;
+  globalThis.fetch = async () => new Response(new ReadableStream({
+    pull(controller) { chunks++; controller.enqueue(new Uint8Array(128 * 1024).fill(32)); },
+    cancel() { cancelled = true; },
+  }));
+  const result = await analyzeDraft(draft);
+  assert.equal(result.fallbackUsed, true);
+  assert.match(result.reason || '', /размер/);
+  assert.equal(cancelled, true);
+  assert.ok(chunks <= 11, 'The reader must stop instead of buffering the unbounded stream.');
+  assert.equal(useAiInspectorStore.getState().latest?.response, null);
+});
+
+test('oversized content-length is rejected before consuming the body', async () => {
+  let cancelled = false;
+  globalThis.fetch = async () => new Response(new ReadableStream({ cancel() { cancelled = true; } }),
+    { headers: { 'Content-Length': String(1024 * 1024 + 1) } });
+  assert.equal((await analyzeDraft(draft)).fallbackUsed, true);
+  assert.equal(cancelled, true);
+  assert.match(useAiInspectorStore.getState().latest?.reason || '', /размер/);
+});
+
+test('oversized 422 refusals never switch to fallback', async () => {
+  globalThis.fetch = async () => new Response('x'.repeat(1024 * 1024 + 1), { status: 422 });
+  await assert.rejects(analyzeDraft(draft), error => error instanceof AiRequestError && error.status === 422);
+  assert.equal(useAiInspectorStore.getState().latest, null);
+});
+
+test('cancellation during a stalled response body releases the stream and leaves no result', async () => {
+  let cancelled = false;
+  let bodyReady!: () => void;
+  const ready = new Promise<void>(resolve => { bodyReady = resolve; });
+  globalThis.fetch = async () => new Response(new ReadableStream({
+    pull() { bodyReady(); }, cancel() { cancelled = true; },
+  }));
+  const controller = new AbortController();
+  const pending = analyzeDraft(draft, '', { signal: controller.signal });
+  await ready;
+  controller.abort();
+  await assert.rejects(pending, { name: 'AbortError' });
+  assert.equal(cancelled, true);
+  assert.equal(useAiInspectorStore.getState().latest, null);
+});
+
+test('body deadline also bounds servers that send headers but never finish a response', async (context) => {
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  let cancelled = false;
+  let bodyReady!: () => void;
+  const ready = new Promise<void>(resolve => { bodyReady = resolve; });
+  globalThis.fetch = async () => new Response(new ReadableStream({
+    pull() { bodyReady(); }, cancel() { cancelled = true; },
+  }));
+  const pending = analyzeDraft(draft);
+  await ready;
+  context.mock.timers.tick(12_000);
+  assert.equal((await pending).fallbackUsed, true);
+  assert.equal(cancelled, true);
+  assert.match(useAiInspectorStore.getState().latest?.reason || '', /12 секунд/);
+});
+
+test('a refused new analysis cannot leave the previous task in the inspector', async () => {
+  reply({ detectedFields: {}, missingFields: [], questions: createClarificationQuestions([]), provider: 'TestProvider', fallbackUsed: false });
+  await analyzeDraft(draft);
+  assert.ok(useAiInspectorStore.getState().latest);
+  await assert.rejects(analyzeDraft('Реши 2+2'));
+  assert.equal(useAiInspectorStore.getState().latest, null);
+});
+
+test('strict JSON rejects duplicate keys, excessive depth, numeric overflow and invalid Unicode', () => {
+  for (const body of [
+    '{"provider":"first","provider":"last"}',
+    '{"provider":"first","\\u0070rovider":"last"}',
+    '{"confidence":1e999}', '{"text":"\\ud800"}',
+    '['.repeat(33) + '0' + ']'.repeat(33),
+  ]) assert.throws(() => parseStrictAiJson(body));
+  const valid = { text: 'Literal \\"quoted\\" {commas, braces} and Unicode 😀', nested: [{ value: 'a' }, { value: 'b' }] };
+  assert.deepEqual(parseStrictAiJson(JSON.stringify(valid)), valid);
+});
+
+test('a schema-valid response with duplicate provider metadata still falls back', async () => {
+  const good = JSON.stringify({ detectedFields: {}, missingFields: [], questions: createClarificationQuestions([]), provider: 'TestProvider', fallbackUsed: false });
+  globalThis.fetch = async () => new Response('{"provider":"hidden",' + good.slice(1));
+  assert.equal((await analyzeDraft(draft)).fallbackUsed, true);
+  assert.equal(useAiInspectorStore.getState().latest?.validation.jsonValid, false);
+});
+
+test('provider cannot strip negations, while positive short excerpts remain usable', async () => {
+  for (const [input, value, expectedFallback] of [
+    ['Нужен бот. Данные CSV не предоставим.', 'Данные CSV', true],
+    ['Need an app. We do not provide CSV data.', 'CSV data', true],
+    ['Бот керек. CSV деректері жоқ.', 'CSV деректері', true],
+    ['Нужен бот. Данные CSV не предоставим.', 'Данные CSV не предоставим.', false],
+    ['Нужен бот. Данные: CSV за 2025 год.', 'CSV за 2025 год', false],
+  ] as const) {
+    reply({ detectedFields: { availableData: { value, source: 'draft' } }, missingFields: [], questions: createClarificationQuestions([]), provider: 'TestProvider', fallbackUsed: false });
+    assert.equal((await analyzeDraft(input)).fallbackUsed, expectedFallback, input);
+  }
 });

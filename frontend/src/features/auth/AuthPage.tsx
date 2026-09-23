@@ -4,7 +4,7 @@ import { authClient } from '../../services/authClient';
 import type { Account } from '../../types/auth';
 import './AuthPage.css';
 
-type Mode = 'login' | 'register' | 'forgot' | 'resend' | 'sent' | 'reset' | 'verified' | 'profile';
+type Mode = 'login' | 'register' | 'forgot' | 'resend' | 'sent' | 'reset' | 'verified' | 'profile' | 'unavailable';
 type IconName = 'arrow' | 'back' | 'mail' | 'lock' | 'eye' | 'eyeOff' | 'person' | 'team' | 'business' | 'check' | 'logout';
 
 function Icon({ name, className = '' }: { name: IconName; className?: string }) {
@@ -73,6 +73,7 @@ function StoryPanel() {
 }
 
 const headings: Record<Mode, { eyebrow: string; title: string; description: string }> = {
+  unavailable: { eyebrow: 'ДОСТУП К АККАУНТУ', title: 'Вход временно недоступен.', description: 'Сервис аккаунтов ещё не подключён. Попробуйте зайти позже.' },
   login: { eyebrow: 'РАДЫ ВИДЕТЬ ВАС СНОВА', title: 'Продолжим?', description: 'Войдите в аккаунт — ваши идеи ждут продолжения.' },
   register: { eyebrow: 'ВАШ ПЕРВЫЙ ШАГ', title: 'Начнём знакомство.', description: 'Создайте аккаунт и найдите свою роль в проекте.' },
   forgot: { eyebrow: 'ДОСТУП К АККАУНТУ', title: 'Забыли пароль?', description: 'Так бывает. Укажите почту аккаунта — мы отправим ссылку для восстановления.' },
@@ -92,6 +93,8 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [failedCallback, setFailedCallback] = useState<'recovery' | 'verification' | null>(null);
@@ -122,12 +125,16 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
       if (result.message) setNotice(result.message);
     }).catch((failure: unknown) => {
       if (active) {
+        if (failure && typeof failure === 'object' && 'code' in failure && failure.code === 'CONFIGURATION') {
+          setMode('unavailable');
+          return;
+        }
         setError(errorMessage(failure));
         setFailedCallback(callbackPath === '/auth/reset-password' ? 'recovery' : callbackPath === '/auth/callback' ? 'verification' : null);
       }
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [bootstrapAttempt]);
 
   useEffect(() => {
     if (previousMode.current !== mode) {
@@ -161,12 +168,13 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
   }
 
   async function perform(action: () => Promise<void>) {
-    if (busy) return;
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError('');
     setNotice('');
     try { await action(); } catch (failure) { setError(errorMessage(failure)); }
-    finally { setBusy(false); }
+    finally { busyRef.current = false; setBusy(false); }
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -256,12 +264,14 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
           {failedCallback && <button type="button" className="sana-secondary sana-recovery-retry" onClick={() => switchMode(failedCallback === 'recovery' ? 'forgot' : 'resend')} disabled={busy}>Запросить новую ссылку</button>}
           {notice && (mode !== 'sent' || resent) && <div className="sana-message sana-message--success" role="status"><Icon name="check" /><p>{notice}</p></div>}
 
+          {mode === 'unavailable' && <button type="button" className="sana-secondary" onClick={() => { setLoading(true); setError(''); setBootstrapAttempt(value => value + 1); }}>Попробовать снова</button>}
+
           {isForm && <form className="sana-form" onSubmit={submit}>
             {mode === 'register' && <fieldset className="sana-role-field" disabled={busy}><legend>Я здесь как</legend><div className="sana-roles">
               <label className={`sana-role ${role === 'student' ? 'is-selected' : ''}`}><input type="radio" name="role" value="student" checked={role === 'student'} onChange={() => setRole('student')} /><Icon name="team" /><span><strong>Студент</strong><small>Ищу задачи и опыт</small></span><i aria-hidden="true">{role === 'student' && <Icon name="check" />}</i></label>
               <label className={`sana-role ${role === 'business' ? 'is-selected' : ''}`}><input type="radio" name="role" value="business" checked={role === 'business'} onChange={() => setRole('business')} /><Icon name="business" /><span><strong>Бизнес</strong><small>Ищу команду</small></span><i aria-hidden="true">{role === 'business' && <Icon name="check" />}</i></label>
             </div></fieldset>}
-            {mode === 'register' && <Field id="sana-name" name="full_name" label="Как вас зовут" icon="person" autoComplete="name" placeholder="Имя и фамилия" value={name} onChange={(event) => setName(event.target.value)} required maxLength={100} disabled={busy} />}
+            {mode === 'register' && <Field id="sana-name" name="full_name" label="Как вас зовут" icon="person" autoComplete="name" placeholder="Имя и фамилия" value={name} onChange={(event) => setName(event.target.value)} required maxLength={120} disabled={busy} />}
             {mode !== 'reset' && <Field id="sana-email" name="email" label="Электронная почта" icon="mail" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={254} disabled={busy} />}
             {mode !== 'forgot' && mode !== 'resend' && <Field id="sana-password" name="password" label={mode === 'reset' ? 'Новый пароль' : 'Пароль'} icon="lock" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder={mode === 'login' ? 'Введите пароль' : 'Не менее 12 символов'} hint={mode !== 'login' ? 'От 12 символов. Можно использовать длинную фразу.' : undefined} value={password} onChange={(event) => setPassword(event.target.value)} minLength={mode === 'login' ? 1 : 12} maxLength={128} required disabled={busy} />}
             {(mode === 'register' || mode === 'reset') && <Field id="sana-confirmation" name="password_confirmation" label="Повторите пароль" icon="lock" type="password" autoComplete="new-password" placeholder="Ещё раз, чтобы не ошибиться" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} minLength={12} maxLength={128} required disabled={busy} />}

@@ -1,6 +1,7 @@
 import time
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
 
 from ..database import connect
 from ..schemas.auth import CampaignRequest, MessageResponse, TokenRequest
@@ -20,7 +21,8 @@ def create_campaign(payload: CampaignRequest, request: Request, admin=Depends(ad
         return supabase_gateway.queue_campaign(settings, admin["id"], payload.subject, payload.text)
     with connect(settings) as db:
         db.execute("BEGIN IMMEDIATE")
-        users = db.execute("SELECT * FROM users WHERE email_verified = 1 AND newsletter_opt_in = 1").fetchall()
+        # Read only enough rows to enforce the MVP cap, even on a large database.
+        users = db.execute("SELECT * FROM users WHERE email_verified = 1 AND newsletter_opt_in = 1 LIMIT 501").fetchall()
         if len(users) > 500:
             raise HTTPException(400, "Лимит MVP — 500 получателей. Нужен отдельный сервис рассылок.")
         cursor = db.execute("INSERT INTO campaigns (subject, created_by, created_at) VALUES (?, ?, ?)",
@@ -34,7 +36,8 @@ def create_campaign(payload: CampaignRequest, request: Request, admin=Depends(ad
 
 
 @router.get("/campaigns/{campaign_id}")
-def campaign_status(campaign_id: int, request: Request, admin=Depends(admin_user)):
+def campaign_status(campaign_id: Annotated[int, Path(ge=1, le=2**63 - 1)],
+                    request: Request, admin=Depends(admin_user)):
     if request.app.state.settings.auth_provider == "supabase":
         return supabase_gateway.campaign_status(request.app.state.settings, campaign_id)
     with connect(request.app.state.settings) as db:

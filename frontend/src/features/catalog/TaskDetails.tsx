@@ -8,6 +8,7 @@ import { ProgressBar } from '../../components/ProgressBar';
 import { calculateTeamMatch } from '../../services/teamMatchService';
 import type { Task } from '../../types/task';
 import { ProposalModal } from '../proposals/ProposalModal';
+import { openTaskEditor } from '../builder/openTaskEditor';
 
 const detailFields: { key: keyof Task; label: string }[] = [
   { key: 'context', label: 'Контекст' }, { key: 'need', label: 'Потребность бизнеса' },
@@ -31,7 +32,7 @@ export function TaskDetails({ task, onClose }: { task: Task; onClose: () => void
     <div className="tags detail-tags">{task.tags.map((tag) => <span className="badge tag" key={tag}>{tag}</span>)}</div>
     <div className="details-grid">{detailFields.map(({ key, label }) => <section className="detail-field" key={key}><h3>{label}</h3><p>{String(task[key] || 'Бизнес пока не уточнил это поле.')}</p></section>)}</div>
     {activeRole === 'student' && match && <section className="match-explanation"><div className="section-heading"><div><span className="eyebrow">ПОЧЕМУ ПОДХОДИТ</span><h3>{team?.name} · {match.total}% соответствия</h3></div></div><div className="match-factors">{([{ label: 'Технологии', value: match.technologies }, { label: 'Навыки', value: match.skills }, { label: 'Интересы', value: match.interests }, { label: 'Отрасль', value: match.industry }]).map((item) => <div key={item.label}><div className="match-factor-label"><span>{item.label}</span><strong>{item.value}%</strong></div><ProgressBar value={item.value} /></div>)}</div><div className="match-keywords"><div><h4>Совпадает</h4><div className="tags">{match.matching.length ? match.matching.map((item) => <span className="badge" key={item}>{item}</span>) : <span className="muted">Прямых совпадений пока нет</span>}</div></div><div><h4>Можно усилить</h4><div className="tags">{match.missing.length ? match.missing.map((item) => <span className="badge tag" key={item}>{item}</span>) : <span className="muted">Все указанные требования покрыты</span>}</div></div></div><p className="muted small-text">Соответствие рассчитано по профилю команды. Оно помогает сравнивать задачи и не ограничивает выбор.</p></section>}
-    <div className="modal-actions"><Button variant="secondary" onClick={onClose}>Закрыть</Button>{activeRole === 'student' && task.published && (ownProposal ? <Button onClick={() => { onClose(); navigate('my-proposals'); }}>Перейти к моему отклику</Button> : <Button onClick={() => setApplying(true)} disabled={!team}>Отправить предложение <span aria-hidden="true">↗</span></Button>)}</div>
+    <div className="modal-actions"><Button variant="secondary" onClick={onClose}>Закрыть</Button>{activeRole === 'business' && <Button onClick={() => { onClose(); openTaskEditor(task.id); }}>Редактировать карточку</Button>}{activeRole === 'student' && task.published && <>{ownProposal && <Button variant="secondary" onClick={() => { onClose(); navigate('my-proposals'); }}>Перейти к моему отклику</Button>}<Button onClick={() => setApplying(true)} disabled={!team}>Отправить предложение <span aria-hidden="true">↗</span></Button></>}</div>
     {activeRole === 'student' && !team && <p className="muted small-text">Чтобы отправить предложение, выберите активную команду в каталоге.</p>}
   </Modal>;
 }

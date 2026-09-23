@@ -126,5 +126,36 @@ end;
 $$;
 reset role;
 
+-- The 500-recipient cap must roll back the entire RPC, including action tokens.
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data)
+select gen_random_uuid(), 'sana-cap-' || entry || '@example.invalid', now(),
+       '{"full_name":"Limit fixture","newsletter_opt_in":true}'::jsonb
+from generate_series(1, 501) as entry;
+
+set local role service_role;
+do $$
+declare
+    v_campaigns bigint;
+    v_jobs bigint;
+    v_tokens bigint;
+begin
+    select count(*) into v_campaigns from public.mail_campaigns;
+    select count(*) into v_jobs from public.mail_outbox;
+    select count(*) into v_tokens from public.mail_unsubscribe_tokens;
+    begin
+        perform public.queue_newsletter('91000000-0000-4000-8000-000000000001',
+            'Oversized fixture', 'Fixture body', 'https://example.invalid/account');
+        raise exception 'Oversized newsletter unexpectedly succeeded';
+    exception when invalid_parameter_value then null;
+    end;
+    if (select count(*) from public.mail_campaigns) <> v_campaigns
+        or (select count(*) from public.mail_outbox) <> v_jobs
+        or (select count(*) from public.mail_unsubscribe_tokens) <> v_tokens then
+        raise exception 'Rejected campaign partially changed the database';
+    end if;
+end;
+$$;
+reset role;
+
 rollback;
 select 'All SQL assertions passed; test data was rolled back.' as result;

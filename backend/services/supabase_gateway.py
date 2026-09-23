@@ -62,8 +62,8 @@ def _decode_json(body: bytes):
     return data
 
 
-def _text(value, maximum: int, *, single_line=False):
-    if (not isinstance(value, str) or not value.strip() or len(value) > maximum
+def _text(value, maximum: int, *, single_line=False, allow_blank=False):
+    if (not isinstance(value, str) or (not allow_blank and not value.strip()) or len(value) > maximum
             or (single_line and any(char in value for char in "\r\n\x00"))):
         raise ValueError("Invalid text")
     return value
@@ -100,7 +100,9 @@ def _validate_response(method: str, path: str, data):
         if path == "/rest/v1/profiles":
             if type(row["newsletter_opt_in"]) is not bool or row["role"] not in {"student", "business", "admin"}:
                 raise ValueError("Invalid profile")
-            result.append({"id": str(UUID(row["id"])), "full_name": _text(row["full_name"], 100),
+            # profiles.full_name is optional and permits up to 120 characters.
+            # Backfilled/OAuth accounts may therefore have an empty name.
+            result.append({"id": str(UUID(row["id"])), "full_name": _text(row["full_name"], 120, allow_blank=True),
                            "role": row["role"], "newsletter_opt_in": row["newsletter_opt_in"]})
         elif path == "/rest/v1/mail_campaigns":
             result.append({"id": _integer(row["id"]), "subject": _text(row["subject"], 200, single_line=True)})

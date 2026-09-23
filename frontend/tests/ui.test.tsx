@@ -47,10 +47,19 @@ async function clickDemo(step: number) {
 async function setText(id: string, value: string) {
   const field = window.document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement;
   assert.ok(field, `Field ${id} exists.`);
+  await typeInto(field, value);
+}
+async function typeInto(field: HTMLInputElement | HTMLTextAreaElement, value: string) {
   const prototype = field.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
   await act(async () => {
     Object.getOwnPropertyDescriptor(prototype, 'value')!.set!.call(field, value);
     field.dispatchEvent(new window.Event('input', { bubbles: true }));
+  });
+}
+async function choose(select: HTMLSelectElement, value: string) {
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!.set!.call(select, value);
+    select.dispatchEvent(new window.Event('change', { bubbles: true }));
   });
 }
 
@@ -216,4 +225,216 @@ test('demo reset requires its dialog confirmation and cancel preserves user work
   assert.equal(current().milestones.length, initialMilestoneCount);
   assert.equal(current().page, 'overview');
   assert.equal(useAiInspectorStore.getState().latest, null);
+});
+
+test('editing the draft discards outdated extracted facts and preserves deliberate business answers, including cleared fields', async () => {
+  await clickDemo(1);
+  await setText('draft-input', 'Нужен сервис учёта заказов. Есть CSV продаж. Срок 2 недели. Контакт manager@example.com.');
+  await clickDemo(2);
+  assert.match(demoTask().availableData, /CSV/);
+  assert.match(demoTask().constraints, /2 недели/);
+  assert.equal(demoTask().contact, 'manager@example.com');
+  await setText('answer-successCriteria', 'Сократить обработку заказа до 2 минут.');
+  await click(button('Продолжить к карточке'));
+  await setText('task-field-expectedResult', 'Проверенный бизнесом пилот в одном магазине.');
+  await setText('task-field-contact', '');
+  await click(host.querySelectorAll<HTMLButtonElement>('.builder-stepper button')[0]);
+  await setText('draft-input', 'Нужен сервис учёта заказов. Контакт manager@example.com.');
+  assert.equal(demoTask().availableData, '', 'Deleting a source fact invalidates its derived card field immediately.');
+  assert.equal(demoTask().constraints, '');
+  assert.equal(demoTask().fieldSources?.availableData, undefined);
+  await click(button('Проанализировать с AI'));
+  assert.equal(demoTask().availableData, '');
+  assert.equal(demoTask().constraints, '');
+  assert.equal(demoTask().expectedResult, 'Проверенный бизнесом пилот в одном магазине.');
+  assert.equal(demoTask().fieldSources?.expectedResult, 'manual');
+  assert.equal(demoTask().successCriteria, 'Сократить обработку заказа до 2 минут.');
+  assert.equal(demoTask().fieldSources?.successCriteria, 'clarification');
+  assert.equal(demoTask().contact, '', 'AI must not refill a field intentionally cleared by business.');
+  assert.equal(demoTask().fieldSources?.contact, 'manual');
+  assert.equal(demoTask().confirmed, false);
+  assert.equal(demoTask().published, false);
+});
+
+for (const entry of ['row', 'details'] as const) test(`published task editing from ${entry} keeps its identity and requires fresh confirmation and publication`, async () => {
+  const task = current().tasks.find(item => item.published)!;
+  const originalIds = current().tasks.map(item => item.id);
+  const originalProposals = structuredClone(current().proposals);
+  await click(button('Мои задачи', host.querySelector('.sidebar')!));
+  const row = [...host.querySelectorAll<HTMLElement>('.business-task-row')].find(item => item.textContent?.includes(task.title))!;
+  assert.ok(row);
+  let scope: ParentNode = row;
+  if (entry === 'details') {
+    await click(row.querySelector<HTMLButtonElement>('.task-title-button')!);
+    scope = host.querySelector('dialog[open]')!;
+  }
+  await click(button('Редактировать карточку', scope));
+  assert.equal(current().page, 'builder');
+  assert.equal(current().activeTaskId, task.id);
+  assert.equal(host.querySelector('dialog[open]'), null);
+  assert.deepEqual(current().tasks.map(item => item.id), originalIds);
+  assert.equal(current().tasks.find(item => item.id === task.id)?.published, true, 'Opening the editor does not revoke publication.');
+  await setText('task-field-successCriteria', 'Сократить время обработки заказа до 3 минут.');
+  const changed = () => current().tasks.find(item => item.id === task.id)!;
+  assert.equal(changed().confirmed, false);
+  assert.equal(changed().published, false);
+  assert.equal(changed().fieldSources?.successCriteria, 'manual');
+  assert.equal(changed().confirmedFields.includes('successCriteria'), false);
+  assert.deepEqual(current().proposals, originalProposals);
+  await click(button('Проверить готовность'));
+  assert.equal(button('Подтвердить карточку').disabled, true);
+  await click(host.querySelector<HTMLInputElement>('.consent-field input')!);
+  await click(button('Подтвердить карточку'));
+  assert.equal(changed().confirmed, true);
+  assert.equal(changed().published, false);
+  await click(button('Перейти к публикации'));
+  await click(button('Опубликовать задачу'));
+  assert.equal(changed().published, true);
+  assert.deepEqual(current().tasks.map(item => item.id), originalIds);
+});
+
+test('a team can send another deliberate proposal for the same task without duplicate submission', async () => {
+  await clickDemo(6);
+  const taskId = current().activeTaskId!;
+  const teamId = current().activeTeamId!;
+  const initialCount = current().proposals.filter(item => item.taskId === taskId && item.teamId === teamId).length;
+  let dialog = host.querySelector<HTMLDialogElement>('dialog[open]')!;
+  await click(button('Заполнить пример', dialog));
+  const submit = button('Отправить предложение', dialog);
+  await act(async () => { submit.click(); submit.click(); });
+  assert.equal(current().proposals.filter(item => item.taskId === taskId && item.teamId === teamId).length, initialCount + 1);
+  const task = current().tasks.find(item => item.id === taskId)!;
+  const card = [...host.querySelectorAll<HTMLElement>('.task-card')].find(item => item.textContent?.includes(task.title))!;
+  await click(button('Подробнее', card));
+  dialog = host.querySelector<HTMLDialogElement>('dialog[open]')!;
+  assert.ok(button('Перейти к моему отклику', dialog));
+  await click(button('Отправить предложение', dialog));
+  dialog = host.querySelector<HTMLDialogElement>('dialog[open]')!;
+  await click(button('Заполнить пример', dialog));
+  await click(button('Отправить предложение', dialog));
+  const own = current().proposals.filter(item => item.taskId === taskId && item.teamId === teamId);
+  assert.equal(own.length, initialCount + 2);
+  assert.equal(new Set(own.map(item => item.id)).size, own.length);
+  assert.ok(own.every(item => item.status === 'pending'));
+});
+
+test('repeating the proposal demo keeps the chosen task and starts a fresh form', async () => {
+  await clickDemo(6);
+  const taskId = current().activeTaskId;
+  const teamId = current().activeTeamId;
+  const before = current().proposals.filter(item => item.taskId === taskId && item.teamId === teamId).length;
+  const dialog = host.querySelector('dialog[open]')!;
+  await click(button('Заполнить пример', dialog));
+  await click(button('Отправить предложение', dialog));
+  await clickDemo(6);
+  // The second click replays the same step on the next animation frame.
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  assert.equal(current().activeTaskId, taskId);
+  assert.equal(current().activeTeamId, teamId);
+  const repeated = host.querySelector('dialog[open]')!;
+  assert.ok(repeated?.querySelector('form'));
+  assert.equal(repeated.querySelector('textarea')?.value, '');
+  assert.equal(current().proposals.filter(item => item.taskId === taskId && item.teamId === teamId).length, before + 1);
+});
+
+test('repeating the AI demo step after editing the draft runs analysis for the changed text', async () => {
+  await clickDemo(1);
+  await clickDemo(2);
+  await click(host.querySelectorAll<HTMLButtonElement>('.builder-stepper button')[0]);
+  const updated = 'Нужен бот для записи клиентов в пекарне. Сейчас заявки теряются вручную.';
+  await setText('draft-input', updated);
+  await clickDemo(2);
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  assert.ok(host.querySelector('.clarification-question'), 'Replaying the active step actually opens its UI.');
+  assert.equal(useAiInspectorStore.getState().latest?.input.draft, updated);
+  assert.match(demoTask().need, /бот для записи/);
+  assert.equal(demoTask().confirmed, false);
+});
+
+test('business selects multiple teams in comparison and rejects another proposal without altering earlier choices', async () => {
+  await act(async () => { current().setActiveTask('task-retail'); });
+  await click(button('Отклики', host.querySelector('.sidebar')!));
+  const candidates = current().proposals.filter(item => item.taskId === 'task-retail');
+  assert.equal(candidates.length, 2);
+  const untouched = new Map(current().proposals.filter(item => item.taskId !== 'task-retail').map(item => [item.id, item.status]));
+  await click(button('Сравнить предложения'));
+  let dialog = host.querySelector('dialog[open]')!;
+  await click(button('Выбрать команду', dialog));
+  await click(button('Выбрать команду', dialog));
+  assert.ok(candidates.every(proposal => current().proposals.find(item => item.id === proposal.id)?.status === 'selected'));
+  for (const proposal of candidates) assert.equal(current().milestones.filter(item => item.taskId === proposal.taskId && item.teamId === proposal.teamId).length, 4);
+  for (const [id, status] of untouched) assert.equal(current().proposals.find(item => item.id === id)?.status, status);
+  await click(button('Закрыть сравнение', dialog));
+  await choose(host.querySelector<HTMLSelectElement>('.proposals-toolbar select')!, 'task-healthcare');
+  const declined = current().proposals.find(item => item.taskId === 'task-healthcare')!;
+  await click(button('Отклонить предложение', host.querySelector('.business-proposal')!));
+  dialog = host.querySelector('dialog[open]')!;
+  await click(button('Отмена', dialog));
+  assert.equal(current().proposals.find(item => item.id === declined.id)?.status, 'pending');
+  await click(button('Отклонить предложение', host.querySelector('.business-proposal')!));
+  await click(button('Отклонить предложение', host.querySelector('dialog[open]')!));
+  assert.equal(current().proposals.find(item => item.id === declined.id)?.status, 'rejected');
+  assert.ok(candidates.every(proposal => current().proposals.find(item => item.id === proposal.id)?.status === 'selected'));
+});
+
+test('catalog filters can recover from zero results and details cancellation restores focus', async () => {
+  await click(button('Студент', host.querySelector('.role-switch')!));
+  await click(button('Каталог задач', host.querySelector('.sidebar')!));
+  const publishedCount = current().tasks.filter(item => item.published).length;
+  const search = host.querySelector<HTMLInputElement>('.catalog-toolbar input')!;
+  await typeInto(search, 'несуществующий-проект-123456');
+  assert.equal(host.querySelectorAll('.task-card').length, 0);
+  assert.match(host.textContent || '', /Пока ничего не нашлось/);
+  await click(button('Сбросить фильтры'));
+  assert.equal(search.value, '');
+  assert.equal(host.querySelectorAll('.task-card').length, publishedCount);
+  const industry = host.querySelectorAll<HTMLSelectElement>('.catalog-toolbar select')[0];
+  await choose(industry, 'Retail');
+  assert.ok([...host.querySelectorAll('.task-card .task-industry')].every(item => item.textContent?.startsWith('Retail')));
+  const opener = button('Подробнее', host.querySelector('.task-card')!);
+  opener.focus();
+  await click(opener);
+  const dialog = host.querySelector<HTMLDialogElement>('dialog[open]')!;
+  assert.equal(window.document.body.style.overflow, 'hidden');
+  await act(async () => { dialog.dispatchEvent(new window.Event('cancel', { cancelable: true })); });
+  assert.equal(host.querySelector('dialog[open]'), null);
+  assert.equal(window.document.body.style.overflow, '');
+  assert.equal(window.document.activeElement, opener);
+});
+
+test('tag editing accepts separators while saving only unique nonempty labels', async () => {
+  await clickDemo(1);
+  await click(button('Заполнить самостоятельно'));
+  const input = window.document.getElementById('task-tags') as HTMLInputElement;
+  input.focus();
+  await typeInto(input, 'Python,');
+  assert.equal(input.value, 'Python,', 'Typing a separator remains possible.');
+  assert.deepEqual(demoTask().tags, ['Python']);
+  await typeInto(input, 'Python, React, Python, , React  ');
+  assert.deepEqual(demoTask().tags, ['Python', 'React']);
+  await act(async () => { input.blur(); });
+  assert.equal(input.value, 'Python, React');
+});
+
+test('proposal form rejects unsafe URLs and changing team never submits under another identity', async () => {
+  await clickDemo(6);
+  const before = current().proposals.length;
+  const dialog = host.querySelector('dialog[open]')!;
+  await click(button('Заполнить пример', dialog));
+  const url = dialog.querySelector<HTMLInputElement>('input[type="url"]')!;
+  await typeInto(url, 'javascript:alert(1)');
+  await click(button('Отправить предложение', dialog));
+  assert.equal(current().proposals.length, before);
+  assert.match(dialog.querySelector('[role="alert"]')?.textContent || '', /https|http/);
+  await typeInto(url, 'https://user:password@example.com/prototype');
+  await click(button('Отправить предложение', dialog));
+  assert.equal(current().proposals.length, before);
+  assert.ok(dialog.querySelector('[role="alert"]'));
+  await typeInto(url, '');
+  const originalTeam = current().activeTeamId;
+  await act(async () => { current().setActiveTeam(current().teams.find(team => team.id !== originalTeam)!.id); });
+  assert.equal(button('Отправить предложение', dialog).disabled, true);
+  assert.match(dialog.textContent || '', /Активная команда изменилась/);
+  await click(button('Отмена', dialog));
+  assert.equal(current().proposals.length, before);
 });

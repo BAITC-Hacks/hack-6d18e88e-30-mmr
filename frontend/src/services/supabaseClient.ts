@@ -9,21 +9,39 @@ export const authProvider: 'local' | 'supabase' =
 
 let client: SupabaseClient | undefined;
 let storageKey = '';
-const memoryStorage = new Map<string, string>();
+const memoryStorage = new Map<string, string | null>();
+const storageOverrides = new Set<string>();
+
 // Explicit storage also works when the browser disables localStorage. Owning
 // this adapter lets a completed reset discard local credentials even offline.
 const authStorage = {
   getItem(key: string): string | null {
-    try { return window.localStorage.getItem(key); }
+    if (storageOverrides.has(key)) return memoryStorage.get(key) ?? null;
+    try {
+      const value = window.localStorage.getItem(key);
+      // Keep the fallback current after a refresh or logout in another tab.
+      memoryStorage.set(key, value);
+      return value;
+    }
     catch { return memoryStorage.get(key) ?? null; }
   },
   setItem(key: string, value: string) {
     memoryStorage.set(key, value);
-    try { window.localStorage.setItem(key, value); } catch { /* Private browser mode. */ }
+    try {
+      window.localStorage.setItem(key, value);
+      storageOverrides.delete(key);
+    } catch {
+      storageOverrides.add(key);
+    }
   },
   removeItem(key: string) {
-    memoryStorage.delete(key);
-    try { window.localStorage.removeItem(key); } catch { /* In-memory storage only. */ }
+    memoryStorage.set(key, null);
+    try {
+      window.localStorage.removeItem(key);
+      storageOverrides.delete(key);
+    } catch {
+      storageOverrides.add(key);
+    }
   },
 };
 
@@ -33,8 +51,9 @@ export function clearSupabaseLocalSession() {
 }
 
 function invalidConfiguration(): never {
-  const error = new Error('Проверьте VITE_SUPABASE_URL и VITE_SUPABASE_PUBLISHABLE_KEY в frontend/.env.local и перезапустите приложение. Нужен публичный ключ Supabase.');
+  const error = new Error('Сервис аккаунтов ещё не подключён.');
   error.name = 'SupabaseConfigurationError';
+  Object.assign(error, { code: 'CONFIGURATION', status: 503 });
   throw error;
 }
 

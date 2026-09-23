@@ -77,7 +77,7 @@ describe('Supabase identity and configuration', () => {
   it('does not invent an account if the profile migration is missing', async () => {
     query.single.mockResolvedValue({ data: null, error: { code: '42P01', message: 'table missing' } });
     const { authClient } = await load();
-    await expect(authClient.me()).rejects.toMatchObject({ status: 503, message: expect.stringContaining('profiles') });
+    await expect(authClient.me()).rejects.toMatchObject({ status: 503, message: expect.stringContaining('профиль') });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -117,7 +117,7 @@ describe('Supabase identity and configuration', () => {
     sdk.auth.signUp.mockResolvedValue({ data: { user, session }, error: null });
     const { authClient } = await load();
     await expect(authClient.register({ email: user.email, password: 'valid-password', full_name: 'Алия', role: 'student' })).resolves.toMatchObject({
-      message: expect.stringContaining('Подтверждение email в настройках проекта отключено'),
+      message: expect.stringContaining('Аккаунт создан'),
       requires_email_confirmation: false,
     });
   });
@@ -343,5 +343,137 @@ describe('explicit local development adapter', () => {
       body: JSON.stringify({ token: 'legacy-secret', new_password: 'new-secure-password' }),
     }));
     await expect(authClient.resetPassword('', 'another-password')).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe('auth audit regressions', () => {
+  it.each(['', ' '.repeat(5), 'Я'.repeat(121)])('rejects invalid registration names before signup: %s', async full_name => {
+    const { authClient } = await load();
+    await expect(authClient.register({ email: user.email, password: 'valid-password', full_name, role: 'student' })).rejects.toMatchObject({ status: 400 });
+    expect(sdk.auth.signUp).not.toHaveBeenCalled();
+  });
+
+  it.each(['', 'Я'.repeat(120), '𐐀'.repeat(120)])('accepts existing profile names permitted by SQL: %s', async full_name => {
+    query.single.mockResolvedValue({ data: { ...profile, full_name }, error: null });
+    const { authClient } = await load();
+    await expect(authClient.me()).resolves.toMatchObject({ full_name });
+  });
+
+  it('rejects an oversized Supabase profile', async () => {
+    query.single.mockResolvedValue({ data: { ...profile, full_name: 'Я'.repeat(121) }, error: null });
+    const { authClient } = await load();
+    await expect(authClient.me()).rejects.toMatchObject({ status: 503 });
+  });
+
+  it('uses a safe configuration error without build variable names', async () => {
+    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '');
+    const { authClient } = await load();
+    await expect(authClient.initialize()).rejects.toMatchObject({ status: 503, code: 'CONFIGURATION', message: expect.not.stringMatching(/VITE_|\.env|Supabase/) });
+  });
+
+  it.each(['setItem', 'removeItem'] as const)('does not resurrect stale credentials when %s fails but reads succeed', async failedOperation => {
+    const disk = new Map<string, string>();
+    Object.assign(window, { localStorage: {
+      getItem: (key: string) => disk.get(key) ?? null,
+      setItem: (key: string, value: string) => { if (failedOperation === 'setItem') throw new Error('QuotaExceededError'); disk.set(key, value); },
+      removeItem: (key: string) => { if (failedOperation === 'removeItem') throw new Error('SecurityError'); disk.delete(key); },
+    } });
+    const { authClient } = await load();
+    await authClient.initialize();
+    const options = sdk.createClient.mock.calls[0][2].auth;
+    disk.set(options.storageKey, 'old-session');
+    if (failedOperation === 'setItem') {
+      options.storage.setItem(options.storageKey, 'new-session');
+      expect(options.storage.getItem(options.storageKey)).toBe('new-session');
+    } else {
+      const { clearSupabaseLocalSession } = await import('./supabaseClient');
+      clearSupabaseLocalSession();
+      expect(options.storage.getItem(options.storageKey)).toBeNull();
+    }
+  });
+
+  it.each([null, {}, { ...profile, email: user.email, email_verified: 'yes' }, { ...profile, email: user.email, email_verified: true, full_name: null }])('rejects malformed local accounts: %j', async payload => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '');
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(payload)));
+    const { authClient } = await load();
+    await expect(authClient.login(user.email, 'valid-password')).rejects.toMatchObject({ status: 503 });
+  });
+
+  it.each([null, {}, { message: 123 }, { message: 'okay', requires_email_confirmation: 'false' }])('rejects malformed local messages: %j', async payload => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '');
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(payload)));
+    const { authClient } = await load();
+    await expect(authClient.forgotPassword(user.email)).rejects.toMatchObject({ status: 503 });
+  });
+
+  it('hides unexpected proxy exception details in local errors', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '');
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ detail: 'Traceback https://host/?token=private-value' }), { status: 500 }));
+    const { authClient } = await load();
+    await expect(authClient.login(user.email, 'valid-password')).rejects.toMatchObject({ status: 500, message: expect.not.stringContaining('private-value') });
+  });
+
+  it.each(['declared', 'streamed'])('bounds %s local response bodies and cancels the stream', async type => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '');
+    const cancel = vi.fn();
+    const body = new ReadableStream({
+      start(controller) { controller.enqueue(new TextEncoder().encode('x'.repeat(16_385))); },
+      cancel,
+    });
+    vi.mocked(fetch).mockResolvedValue(new Response(body, { headers: type === 'declared' ? { 'Content-Length': '16385' } : {} }));
+    const { authClient } = await load();
+    await expect(authClient.me()).rejects.toMatchObject({ status: 503 });
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it('accepts a validated local account but discards unexpected private fields', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '');
+    const account = { ...profile, id: 12, email: user.email, email_verified: true };
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ ...account, password_hash: 'private-hash' })));
+    const { authClient } = await load();
+    await expect(authClient.me()).resolves.toEqual(account);
+  });
+
+  it('resumes shared storage reads after a later write succeeds', async () => {
+    const disk = new Map<string, string>();
+    let denied = true;
+    Object.assign(window, { localStorage: {
+      getItem: (key: string) => disk.get(key) ?? null,
+      setItem: (key: string, value: string) => { if (denied) throw new Error('QuotaExceededError'); disk.set(key, value); },
+    } });
+    const { authClient } = await load();
+    await authClient.initialize();
+    const options = sdk.createClient.mock.calls[0][2].auth;
+    options.storage.setItem(options.storageKey, 'first-session');
+    expect(options.storage.getItem(options.storageKey)).toBe('first-session');
+    denied = false;
+    options.storage.setItem(options.storageKey, 'second-session');
+    disk.set(options.storageKey, 'session-updated-in-another-tab');
+    expect(options.storage.getItem(options.storageKey)).toBe('session-updated-in-another-tab');
+  });
+
+  it.each(['update', 'delete'])('observes an external storage %s after a successful own write', async operation => {
+    const disk = new Map<string, string>();
+    let readsDenied = false;
+    Object.assign(window, { localStorage: {
+      getItem: (key: string) => { if (readsDenied) throw new Error('SecurityError'); return disk.get(key) ?? null; },
+      setItem: (key: string, value: string) => disk.set(key, value),
+      removeItem: (key: string) => disk.delete(key),
+    } });
+    const { authClient } = await load();
+    await authClient.initialize();
+    const options = sdk.createClient.mock.calls[0][2].auth;
+    options.storage.setItem(options.storageKey, 'original-session');
+    // Change only the disk, as another tab would; no local adapter notification.
+    if (operation === 'update') disk.set(options.storageKey, 'external-session');
+    else disk.delete(options.storageKey);
+    expect(options.storage.getItem(options.storageKey)).toBe(operation === 'update' ? 'external-session' : null);
+    readsDenied = true;
+    expect(options.storage.getItem(options.storageKey)).toBe(operation === 'update' ? 'external-session' : null);
   });
 });

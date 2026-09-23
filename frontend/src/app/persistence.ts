@@ -32,6 +32,7 @@ export const businessPages: readonly AppPage[] = ['overview', 'builder', 'tasks'
 export const studentPages: readonly AppPage[] = ['catalog', 'recommendations', 'my-proposals', 'team', 'inspector'];
 
 const id = z.string().refine(value => value.trim().length > 0);
+const timestamp = z.iso.datetime({ offset: true });
 const strings = z.array(z.string());
 const points = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 export const taskSchema = z.object({
@@ -40,7 +41,7 @@ export const taskSchema = z.object({
   context: z.string(), need: z.string(), targetUsers: z.string(), availableData: z.string(),
   constraints: z.string(), expectedResult: z.string(), successCriteria: z.string(), contact: z.string(), consultationFormat: z.string(),
   confirmedFields: strings, rating: z.number(), readinessLevel: z.enum(['draft', 'working', 'ready', 'priority']),
-  confirmed: z.boolean(), published: z.boolean(), createdAt: z.string(), updatedAt: z.string(),
+  confirmed: z.boolean(), published: z.boolean(), createdAt: timestamp, updatedAt: timestamp,
 });
 const teamSchema = z.object({
   id, name: z.string(), description: z.string(), skills: strings,
@@ -48,14 +49,14 @@ const teamSchema = z.object({
 });
 export const proposalStatusSchema = z.enum(['pending', 'selected', 'rejected']);
 export const proposalSchema = z.object({
-  id, taskId: id, teamId: id, idea: z.string(), implementationPlan: z.string(), estimatedTime: z.string(),
-  prototypeUrl: z.string(), status: proposalStatusSchema, createdAt: z.string(),
+  id, taskId: id, teamId: id, idea: id, implementationPlan: id, estimatedTime: id,
+  prototypeUrl: z.string(), status: proposalStatusSchema, createdAt: timestamp,
 });
 export const milestoneSchema = z.object({
-  id, taskId: id, teamId: id, title: z.string(), description: z.string(),
-  status: z.enum(['pending', 'completed']), points, confirmedAt: z.string().optional(),
+  id, taskId: id, teamId: id, title: id, description: z.string(),
+  status: z.enum(['pending', 'completed']), points, confirmedAt: timestamp.optional(),
 });
-const eventSchema = z.object({ id, title: z.string(), detail: z.string().optional(), createdAt: z.string() });
+const eventSchema = z.object({ id, title: id, detail: z.string().optional(), createdAt: timestamp });
 const stateSchema = z.object({
   tasks: z.array(taskSchema), teams: z.array(teamSchema), proposals: z.array(proposalSchema), milestones: z.array(milestoneSchema),
   activeRole: z.enum(['business', 'student']), activeTeamId: id.nullable(), activeTaskId: id.nullable(),
@@ -77,7 +78,9 @@ export function isSafePrototypeUrl(value: string): boolean {
 
 export function rateTask(task: Task): Task {
   const confirmedFields = confirmableFields.filter(field => task.confirmedFields.includes(field) && task[field].trim().length > 0);
-  const normalized = { ...task, tags: [...task.tags], confirmedFields,
+  const confirmed = task.confirmed && [task.title, task.context, task.need].every(value => value.trim().length > 0);
+  const normalized = { ...task, confirmed, published: task.published && confirmed,
+    tags: [...new Set(task.tags.map(tag => tag.trim()).filter(Boolean))], confirmedFields,
     ...(task.fieldSources ? { fieldSources: { ...task.fieldSources } } : {}),
   };
   const { total } = calculateRating(normalized);
@@ -172,14 +175,23 @@ export function validateStoredState(value: unknown): StoredAppState | null {
 }
 
 let lastStorageError: string | null = null;
+const observedStorage = new Map<string, string | null>();
 export const getStorageError = () => lastStorageError;
 export const clearStorageError = () => { lastStorageError = null; };
+
+/** Only an explicit reset may replace a newer snapshot from another tab. */
+export function rebaseStorageSnapshot(name = STORAGE_KEY): void {
+  try {
+    if (typeof globalThis.localStorage !== 'undefined') observedStorage.set(name, globalThis.localStorage.getItem(name));
+  } catch { /* The normal write reports storage denial while keeping the in-memory demo usable. */ }
+}
 
 export const safeLocalStorage: StateStorage = {
   getItem(name) {
     try {
       if (typeof globalThis.localStorage === 'undefined') return null;
       const raw = globalThis.localStorage.getItem(name);
+      observedStorage.set(name, raw);
       if (!raw) return null;
       const envelope: unknown = JSON.parse(raw);
       if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope) || !('state' in envelope)) throw new Error('Invalid save');
@@ -192,11 +204,22 @@ export const safeLocalStorage: StateStorage = {
     }
   },
   setItem(name, value) {
-    try { if (typeof globalThis.localStorage !== 'undefined') globalThis.localStorage.setItem(name, value); }
+    try {
+      if (typeof globalThis.localStorage === 'undefined') throw new Error('Storage unavailable');
+      // localStorage is shared, but each tab has its own live store. An unrelated
+      // action (even navigation/toast dismissal) must not save a stale full snapshot.
+      if (globalThis.localStorage.getItem(name) !== (observedStorage.get(name) ?? null)) {
+        lastStorageError = 'Данные изменены в другой вкладке. Текущие изменения остаются в памяти. Скопируйте нужный текст и перезагрузите страницу, чтобы загрузить актуальное сохранение.';
+        return;
+      }
+      globalThis.localStorage.setItem(name, value);
+      observedStorage.set(name, value);
+      lastStorageError = null;
+    }
     catch { lastStorageError = 'Браузер не разрешает сохранение. Изменения доступны до перезагрузки страницы.'; }
   },
   removeItem(name) {
-    try { if (typeof globalThis.localStorage !== 'undefined') globalThis.localStorage.removeItem(name); }
+    try { if (typeof globalThis.localStorage !== 'undefined') { globalThis.localStorage.removeItem(name); observedStorage.set(name, null); } }
     catch { lastStorageError = 'Браузер не разрешает очистить сохранение.'; }
   },
 };

@@ -1,0 +1,15 @@
+[
+  {"draft":"Нужен бот. Контакт old@example.com.", "contact":"old@example.com"},
+  {"draft":"Нужен бот. Telegram @old_operator", "contact":"@old_operator"},
+  {"draft":"Нужен бот. Старый контакт old@example.com больше не работает. Контакт: new@example.com", "contact":"new@example.com"},
+  {"draft":"Нужен бот. Не пишите old@example.com.", "contact":null},
+  {"draft":"We need an app. Old contact old@example.com is no longer active. Contact: new@example.com", "contact":"new@example.com"},
+  {"draft":"Бот керек. Ескі байланыс old@example.com. Байланыс: new@example.com", "contact":"new@example.com"},
+  {"draft":"Нужен бот. За год обработали 1234567890123456 заказов.", "contact":null},
+  {"draft":"Нужен бот. Номер заказа 1234567890.", "contact":null},
+  {"draft":"Нужен бот. Телефон: 77001234567", "contact":"77001234567"},
+  {"draft":"Нужен бот. Контакт +77001234567", "contact":"+77001234567"},
+  {"draft":"Нужен бот. Telegram: @demo_lead", "contact":"@demo_lead"},
+  {"draft":"Нужен бот. Контакта пока нет", "contact":null},
+  {"draft":"Нужен бот. Данных нет, CSV не предоставим.", "contact":null, "availableData":"Данных нет, CSV не предоставим."}
+]

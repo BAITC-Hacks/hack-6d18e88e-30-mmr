@@ -7,7 +7,7 @@ import { seedTasks, seedTeams, seedProposals } from '../data/syntheticData';
 import {
   businessPages, studentPages, confirmableFields, ensureStarterMilestones, milestoneSchema,
   proposalSchema, proposalStatusSchema, rateTask, restoreState, safeStorage, taskSchema,
-  clearStorageError, getStorageError, isSafePrototypeUrl, STORAGE_KEY, STORAGE_VERSION,
+  clearStorageError, getStorageError, isSafePrototypeUrl, rebaseStorageSnapshot, STORAGE_KEY, STORAGE_VERSION,
   type StoredAppState, type ActivityEvent, type AppPage,
 } from './persistence';
 
@@ -65,6 +65,7 @@ export const useAppStore = create<AppState>()(persist((set, get) => {
   const business = () => get().activeRole === 'business';
   const reset = () => {
     clearStorageError();
+    rebaseStorageSnapshot();
     commit({ ...initialData(), toast: 'Демонстрационные данные восстановлены.', storageError: null });
   };
   return {

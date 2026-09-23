@@ -36,4 +36,4 @@
 .consent-field input { width: 18px; height: 18px; margin-top: 3px; flex-shrink: 0; accent-color: var(--accent, #315c41); }
 .task-builder textarea { resize: vertical; min-height: 80px; }
 @media (max-width: 1150px) { .builder-layout { grid-template-columns: minmax(0, 1fr) 285px; gap: 16px; } .rating-summary { flex-direction: column; text-align: center; } }
-@media (max-width: 900px) { .builder-layout { grid-template-columns: 1fr; } .rating-panel { position: static; } .rating-summary { flex-direction: row; text-align: left; } .builder-stepper li { flex: 1 0 90px; } }
+@media (max-width: 900px) { .builder-layout { grid-template-columns: minmax(0, 1fr); } .rating-panel { position: static; } .rating-summary { flex-direction: row; flex-wrap: wrap; text-align: left; } .builder-stepper li { flex: 1 0 90px; } }

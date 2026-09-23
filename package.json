@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node scripts/start.mjs",
     "test:start": "node tests/smoke_launcher.mjs",
+    "test:browser": "npm --prefix frontend run build && node tests/run_browser_audit.mjs",
     "check": "node tests/run_checks.mjs",
     "test": "npm --prefix frontend test"
   }

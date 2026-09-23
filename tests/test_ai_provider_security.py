@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import sys
 import threading
 from pathlib import Path
@@ -137,7 +138,11 @@ def test_invalid_provider_key_is_rejected_before_transport(monkeypatch, key):
 
 @pytest.mark.parametrize("model", ["bad\nmodel", "\ud800", "x" * 201])
 def test_invalid_model_configuration_falls_back_before_transport(monkeypatch, model):
-    monkeypatch.setenv("AI_MODEL", model)
+    # POSIX cannot store lone surrogates in the environment. Simulate the
+    # malformed configuration on every platform, preserving other env reads.
+    original_get = os.environ.get
+    monkeypatch.setattr(os.environ, "get", lambda key, default=None:
+                        model if key == "AI_MODEL" else original_get(key, default))
 
     def forbidden(**kwargs):
         pytest.fail("Invalid model configuration must not construct a transport")

@@ -16,6 +16,8 @@ export class AiScopeError extends Error {
 const injectionPatterns = policy.injectionPatterns.map(pattern => new RegExp(pattern, 'iu'));
 const offTopicPatterns = policy.offTopicPatterns.map(pattern => new RegExp(pattern, 'iu'));
 const topicPatterns = policy.topicPatterns.map(pattern => new RegExp(pattern, 'iu'));
+const workContextPatterns = policy.workContextPatterns.map(pattern => new RegExp(pattern, 'iu'));
+const workIntentPatterns = policy.workIntentPatterns.map(pattern => new RegExp(pattern, 'iu'));
 
 function normalize(text: string, preserveClauses = false): string {
   const normalized = text.normalize('NFKC').toLowerCase()
@@ -31,8 +33,12 @@ export function assertTaskScope(draft: string, industry = '', answers: string[] 
   if (texts.some(text => injectionPatterns.some(pattern => pattern.test(text)))) {
     throw new AiScopeError('PROMPT_INJECTION');
   }
-  if (input.some(text => offTopicPatterns.some(pattern => pattern.test(normalize(text, true)))) ||
-      !topicPatterns.some(pattern => pattern.test(texts[0]))) {
+  // Plain descriptions need not use software/business jargon. Combine a real work
+  // context with a problem or intended change; industry/answers cannot supply it.
+  const hasTaskContext = topicPatterns.some(pattern => pattern.test(texts[0])) ||
+    (workContextPatterns.some(pattern => pattern.test(texts[0])) &&
+      workIntentPatterns.some(pattern => pattern.test(texts[0])));
+  if (input.some(text => offTopicPatterns.some(pattern => pattern.test(normalize(text, true)))) || !hasTaskContext) {
     throw new AiScopeError('OFF_TOPIC');
   }
 }

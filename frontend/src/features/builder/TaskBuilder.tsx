@@ -35,6 +35,7 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
   const [loading, setLoading] = useState(false);
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
+  const [tagsText, setTagsText] = useState(task.tags.join(', '));
   const controller = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const demoAnalyzed = useRef(false);
@@ -47,6 +48,10 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
   useEffect(() => {
     sessions.set(task.id, { stage, analysis, exampleAnswers });
   }, [task.id, stage, analysis, exampleAnswers]);
+
+  useEffect(() => {
+    if (document.activeElement?.id !== 'task-tags') setTagsText(task.tags.join(', '));
+  }, [task.tags]);
 
   useEffect(() => () => { generation.current += 1; controller.current?.abort(); demoAnalyzed.current = false; }, []);
 
@@ -61,8 +66,26 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
     save({ ...task, [field]: value, fieldSources: { ...task.fieldSources, [field]: source } });
   }
 
+  function updateDraft(rawDraft: string, industry = task.industry) {
+    if (rawDraft === draft && industry === task.industry) return;
+    generation.current += 1;
+    controller.current?.abort();
+    demoAnalyzed.current = false;
+    setLoading(false); setAnalysis(null); setError('');
+    const next = { ...task, rawDraft, industry, fieldSources: { ...task.fieldSources } };
+    // Draft-derived facts lose their source when the draft changes. Business
+    // answers, including deliberately empty fields, remain under business control.
+    if (rawDraft !== draft) for (const { key } of TASK_FIELDS) {
+      if (next.fieldSources[key] === 'draft') {
+        next[key] = '';
+        delete next.fieldSources[key];
+      }
+    }
+    save(next);
+  }
+
   async function runAnalysis() {
-    if (loading || !draft.trim()) return;
+    if (loading || !draft.trim() || activeRole !== 'business') return;
     const requestId = ++generation.current;
     controller.current?.abort();
     const requestController = new AbortController();
@@ -76,9 +99,16 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
       const next = { ...current, fieldSources: { ...current.fieldSources } };
       for (const { key } of TASK_FIELDS) {
         const extracted = result.detectedFields[key];
-        if (extracted?.value.trim() && (!next[key].trim() || next.fieldSources[key] === 'draft')) {
-          next[key] = extracted.value;
-          next.fieldSources[key] = 'draft';
+        const source = next.fieldSources[key];
+        if (source === 'manual' || source === 'clarification') continue;
+        if (source === 'draft' || !next[key].trim()) {
+          if (extracted?.value.trim()) {
+            next[key] = extracted.value;
+            next.fieldSources[key] = 'draft';
+          } else if (source === 'draft') {
+            next[key] = '';
+            delete next.fieldSources[key];
+          }
         }
       }
       save(next);
@@ -147,10 +177,10 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
       <div className="stack">
         {stage === 0 && <section className="panel stack" aria-busy={loading}>
           <div><span className="eyebrow">ШАГ 01</span><h2>Начните с бизнес-проблемы</h2><p className="muted">Опишите процесс, трудности и то, что хотите изменить. Остальное уточним вместе.</p></div>
-          <label className="field" htmlFor="draft-input"><span>Опишите бизнес-задачу в свободной форме</span><textarea id="draft-input" rows={8} value={draft} disabled={loading || activeRole !== 'business'} placeholder="Мы хотим автоматизировать… Сейчас процесс устроен так…" onChange={(event) => save({ ...task, rawDraft: event.target.value })} /></label>
+          <label className="field" htmlFor="draft-input"><span>Опишите бизнес-задачу в свободной форме</span><textarea id="draft-input" rows={8} value={draft} disabled={loading || activeRole !== 'business'} placeholder="Мы хотим автоматизировать… Сейчас процесс устроен так…" onChange={(event) => updateDraft(event.target.value)} /></label>
           <div className="form-grid">
-            <label className="field" htmlFor="draft-industry"><span>Отрасль</span><select id="draft-industry" value={task.industry} disabled={loading || activeRole !== 'business'} onChange={(event) => save({ ...task, industry: event.target.value })}>{industries.map((industry) => <option key={industry}>{industry}</option>)}</select></label>
-            <label className="field" htmlFor="draft-example"><span>Попробовать на примере</span><select id="draft-example" value="" disabled={loading || activeRole !== 'business'} onChange={(event) => { const example = seedTasks.find((item) => item.id === event.target.value); if (example) { save({ ...task, rawDraft: example.rawDraft || example.context, industry: example.industry }); setAnalysis(null); } }}><option value="">Выберите пример черновика</option>{seedTasks.filter((item) => !item.published).map((example) => <option key={example.id} value={example.id}>{example.industry} · {example.title}</option>)}</select></label>
+            <label className="field" htmlFor="draft-industry"><span>Отрасль</span><select id="draft-industry" value={task.industry} disabled={loading || activeRole !== 'business'} onChange={(event) => updateDraft(draft, event.target.value)}>{industries.map((industry) => <option key={industry}>{industry}</option>)}</select></label>
+            <label className="field" htmlFor="draft-example"><span>Попробовать на примере</span><select id="draft-example" value="" disabled={loading || activeRole !== 'business'} onChange={(event) => { const example = seedTasks.find((item) => item.id === event.target.value); if (example) updateDraft(example.rawDraft || example.context, example.industry); }}><option value="">Выберите пример черновика</option>{seedTasks.filter((item) => !item.published).map((example) => <option key={example.id} value={example.id}>{example.industry} · {example.title}</option>)}</select></label>
           </div>
           <div className="button-row"><Button disabled={loading || !draft.trim() || activeRole !== 'business'} onClick={() => void runAnalysis()}>{loading ? 'Анализируем задачу…' : 'Проанализировать с AI →'}</Button><Button variant="ghost" disabled={loading || !draft.trim()} onClick={() => { if (!task.context.trim()) updateField('context', draft.trim(), 'draft'); openEditor(); }}>Заполнить самостоятельно</Button></div>
           {loading && <p role="status" className="muted">Проверяем черновик и готовим вопросы. Обычно это занимает несколько секунд.</p>}
@@ -174,7 +204,10 @@ function BuilderFlow({ initialTask, demoStep }: { initialTask: Task; demoStep?: 
           <div><span className="eyebrow">ШАГ 03</span><h2>Карточка вашей задачи</h2><p className="muted">Уточните формулировки. Источник каждого поля указан рядом с названием.</p></div>
           {exampleAnswers && <div className="notice notice-warning">В карточке есть демонстрационные данные. Проверьте каждое поле.</div>}
           {TASK_FIELDS.map(({ key, label }) => <label key={key} className="field" htmlFor={`task-field-${key}`}><span className="field-title"><span>{label}</span>{task[key].trim() && <Badge>{sourceLabels[task.fieldSources?.[key] || 'manual']}</Badge>}</span>{key === 'title' || key === 'contact' ? <input id={`task-field-${key}`} value={task[key]} disabled={activeRole !== 'business'} onChange={(event) => updateField(key, event.target.value, 'manual')} /> : <textarea id={`task-field-${key}`} rows={3} value={task[key]} disabled={activeRole !== 'business'} onChange={(event) => updateField(key, event.target.value, 'manual')} />}</label>)}
-          <label className="field" htmlFor="task-tags"><span>Технологии и навыки, через запятую</span><input id="task-tags" value={task.tags.join(', ')} disabled={activeRole !== 'business'} onChange={(event) => save({ ...task, tags: event.target.value.split(',').map((value) => value.trimStart()) })} placeholder="Python, Analytics, React" /></label>
+          <label className="field" htmlFor="task-tags"><span>Технологии и навыки, через запятую</span><input id="task-tags" value={tagsText} disabled={activeRole !== 'business'} onChange={(event) => {
+            setTagsText(event.target.value);
+            save({ ...task, tags: [...new Set(event.target.value.split(',').map(value => value.trim()).filter(Boolean))] });
+          }} onBlur={() => setTagsText(task.tags.join(', '))} placeholder="Python, Analytics, React" /></label>
           <div className="button-row"><Button onClick={() => setStage(3)}>Проверить готовность →</Button><Button variant="ghost" onClick={() => setStage(1)}>Назад к вопросам</Button></div>
         </section>}
 

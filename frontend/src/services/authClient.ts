@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js';
+import { z } from 'zod';
 import type { Account, AuthBootstrap, AuthMessage, Registration } from '../types/auth';
 import { authProvider, clearSupabaseLocalSession, getSupabaseClient } from './supabaseClient';
 
@@ -7,24 +8,39 @@ export { authProvider } from './supabaseClient';
 const baseUrl = (import.meta.env?.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
 const mailMessage = 'Если адрес подходит для этой операции, письмо будет отправлено. Проверьте почту и папку «Спам».';
 const invalidLink = 'Ссылка недействительна или устарела. Запросите новое письмо и откройте последнюю ссылку.';
-const profileMessage = 'Не удалось загрузить профиль. Проверьте подключение и настройку таблицы profiles в Supabase.';
+const profileMessage = 'Не удалось загрузить профиль. Попробуйте снова через несколько минут.';
+const serviceMessage = 'Не удалось связаться с сервисом. Проверьте интернет и повторите попытку.';
+const accountSchema = z.object({
+  id: z.union([z.number().int().positive().max(Number.MAX_SAFE_INTEGER), z.string().min(1).max(128)]),
+  email: z.email().max(254),
+  full_name: z.string().max(240).refine(value => [...value].length <= 120),
+  role: z.enum(['student', 'business', 'admin']),
+  email_verified: z.boolean(),
+  newsletter_opt_in: z.boolean(),
+});
+const messageSchema = z.object({
+  message: z.string().min(1).max(2000),
+  requires_email_confirmation: z.boolean().optional(),
+});
 let initialization: Promise<AuthBootstrap> | undefined;
 let recoveryUserId: string | null = null;
 let legacyResetToken = '';
 
 export class AuthError extends Error {
   readonly status: number;
-  constructor(message: string, status: number) {
+  readonly code?: 'CONFIGURATION';
+  constructor(message: string, status: number, code?: 'CONFIGURATION') {
     super(message);
     this.name = 'AuthError';
     this.status = status;
+    this.code = code;
   }
 }
 
 function translateError(error: unknown): AuthError {
   if (error instanceof AuthError) return error;
   if (error instanceof Error && error.name === 'SupabaseConfigurationError') {
-    return new AuthError(error.message, 503);
+    return new AuthError('Сервис аккаунтов ещё не подключён. Попробуйте зайти позже.', 503, 'CONFIGURATION');
   }
   const failure = error as { code?: string; status?: number; name?: string } | null;
   const messages: Record<string, string> = {
@@ -52,7 +68,7 @@ function translateError(error: unknown): AuthError {
     return new AuthError('Сессия завершилась. Войдите снова.', 401);
   }
   // Raw SDK/network errors may contain URLs or credentials. Never render them.
-  return new AuthError('Не удалось связаться с сервисом. Проверьте интернет и настройки подключения, затем повторите попытку.', 503);
+  return new AuthError(serviceMessage, 503);
 }
 
 async function safely<T>(action: () => Promise<T>): Promise<T> {
@@ -68,12 +84,52 @@ async function request<T>(path: string, body?: unknown, method = 'POST', scope =
       signal: AbortSignal.timeout(15_000),
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
-    const data = await response.json();
     if (!response.ok) {
-      throw new AuthError(typeof data.detail === 'string' ? data.detail : 'Проверьте заполнение полей.', response.status);
+      // Proxy/server exceptions can include URLs and credentials. Only show
+      // messages selected here; never render an arbitrary response detail.
+      void response.body?.cancel().catch(() => undefined);
+      const message = response.status === 401
+        ? path === 'login' ? 'Неверный email или пароль.' : 'Сессия завершилась. Войдите снова.'
+        : response.status === 403 && path === 'login' ? 'Сначала подтвердите email по ссылке из письма.'
+        : response.status === 429 ? 'Слишком много попыток. Подождите немного и попробуйте снова.'
+        : response.status === 400 && ['verify-email', 'reset-password', 'unsubscribe'].includes(path) ? invalidLink
+        : response.status === 400 || response.status === 422 ? 'Проверьте заполнение полей.'
+        : serviceMessage;
+      throw new AuthError(message, response.status);
     }
-    return data as T;
+    const data: unknown = await readResponse(response);
+    const schema = scope === 'auth' && ['login', 'me', 'preferences'].includes(path) ? accountSchema : messageSchema;
+    const result = schema.safeParse(data);
+    if (!result.success) throw new AuthError(serviceMessage, 503);
+    return result.data as T;
   });
+}
+
+async function readResponse(response: Response): Promise<unknown> {
+  const limit = 16_384;
+  const declared = response.headers.get('content-length');
+  if (declared !== null && (!/^\d+$/.test(declared) || Number(declared) > limit)) {
+    void response.body?.cancel().catch(() => undefined);
+    throw new AuthError(serviceMessage, 503);
+  }
+  if (!response.body) throw new AuthError(serviceMessage, 503);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  let bytes = 0;
+  let content = '';
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > limit) throw new AuthError(serviceMessage, 503);
+      content += decoder.decode(value, { stream: true });
+    }
+    return JSON.parse(content + decoder.decode());
+  } finally {
+    void reader.cancel().catch(() => undefined);
+    reader.releaseLock();
+  }
 }
 
 function redirect(path: string): string {
@@ -107,14 +163,16 @@ async function accountFor(user: User): Promise<Account> {
       !['student', 'business', 'admin'].includes(data.role) || typeof data.newsletter_opt_in !== 'boolean') {
     throw new AuthError(profileMessage, 503);
   }
-  return {
+  const account = accountSchema.safeParse({
     id: user.id,
     email: user.email ?? '',
     full_name: data.full_name,
     role: data.role,
     newsletter_opt_in: data.newsletter_opt_in,
     email_verified: Boolean(user.email_confirmed_at),
-  };
+  });
+  if (!account.success) throw new AuthError(profileMessage, 503);
+  return account.data;
 }
 
 // Copy callback values, then immediately remove secrets (even on errors) from
@@ -259,6 +317,9 @@ export const authClient = {
   getAccessToken,
   async register(data: Registration): Promise<AuthMessage> {
     validatePassword(data.password);
+    if (!data.full_name.trim() || [...data.full_name.trim()].length > 120) {
+      throw new AuthError('Введите имя длиной от 1 до 120 символов.', 400);
+    }
     if (authProvider === 'local') return request('register', data);
     return safely(async () => {
       if (!['student', 'business'].includes(data.role)) throw new AuthError('Выберите роль: студент или бизнес.', 400);
@@ -271,7 +332,7 @@ export const authClient = {
       });
       if (error) throw error;
       if (result.session) {
-        return { message: 'Аккаунт создан. Подтверждение email в настройках проекта отключено.', requires_email_confirmation: false };
+        return { message: 'Аккаунт создан. Вы можете продолжить работу.', requires_email_confirmation: false };
       }
       return { message: mailMessage, requires_email_confirmation: true };
     });

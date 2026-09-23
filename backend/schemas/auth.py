@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictBool, field_validator
 
 
 class InputModel(BaseModel):
@@ -22,9 +22,9 @@ class LoginRequest(EmailRequest):
 
 class RegisterRequest(EmailRequest):
     password: str = Field(min_length=12, max_length=128)
-    full_name: str = Field(min_length=1, max_length=100)
+    full_name: str = Field(min_length=1, max_length=120)
     role: Literal["student", "business"] = "student"
-    newsletter_opt_in: bool = False
+    newsletter_opt_in: StrictBool = False
 
     @field_validator("full_name", mode="before")
     @classmethod
@@ -41,7 +41,7 @@ class ResetPasswordRequest(TokenRequest):
 
 
 class PreferencesRequest(InputModel):
-    newsletter_opt_in: bool
+    newsletter_opt_in: StrictBool
 
 
 class UserResponse(BaseModel):

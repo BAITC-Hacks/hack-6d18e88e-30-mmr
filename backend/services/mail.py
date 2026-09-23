@@ -86,19 +86,24 @@ def process_outbox(settings: Settings, batch_size: int = 10):
                 continue
             db.execute("UPDATE outbox SET status = 'sending', attempts = attempts + 1, next_attempt = ? WHERE id = ?",
                        (now + 300, row["id"]))
+        attempts = row["attempts"] + 1
         try:
             status = deliver(settings, row)
         except Exception as exc:
             # Store only the error class: SMTP exceptions may contain addresses or credentials.
             error = type(exc).__name__
             logger.warning("Mail job %s failed (%s)", row["id"], error)
-            attempts = row["attempts"] + 1
             with connect(settings) as db:
-                db.execute("UPDATE outbox SET status = ?, next_attempt = ?, last_error = ? WHERE id = ?",
-                           ("failed" if attempts >= 5 else "pending", int(time.time()) + 60 * 2 ** attempts, error, row["id"]))
+                # Fence a worker whose lease expired: a later attempt owns its
+                # own outcome and must never be reset by an earlier callback.
+                db.execute("""UPDATE outbox SET status = ?, next_attempt = ?, last_error = ?
+                              WHERE id = ? AND attempts = ? AND status = 'sending'""",
+                           ("failed" if attempts >= 5 else "pending", int(time.time()) + 60 * 2 ** attempts,
+                            error, row["id"], attempts))
         else:
             with connect(settings) as db:
-                db.execute("UPDATE outbox SET status = ?, body = '', html_body = '', last_error = NULL WHERE id = ?", (status, row["id"]))
+                db.execute("""UPDATE outbox SET status = ?, body = '', html_body = '', last_error = NULL
+                              WHERE id = ? AND attempts = ? AND status = 'sending'""", (status, row["id"], attempts))
         processed += 1
     return processed
 

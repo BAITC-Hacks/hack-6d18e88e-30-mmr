@@ -94,19 +94,17 @@ try {
   let cleared = 0;
   globalThis.setTimeout = ((callback: () => void) => originalSetTimeout(callback, 0)) as typeof setTimeout;
   globalThis.clearTimeout = ((id: ReturnType<typeof setTimeout>) => { cleared++; originalClearTimeout(id); }) as typeof clearTimeout;
-  globalThis.fetch = async (_url, init) => ({
-    ok: true,
-    status: 200,
-    text: () => new Promise((_resolve, reject) => {
-      init!.signal!.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
-    }),
-  }) as Response;
+  let cancelledBodies = 0;
+  globalThis.fetch = async () => new Response(new ReadableStream({
+    cancel() { cancelledBodies++; },
+  }));
   assert.equal((await analyzeDraft(draft)).fallbackUsed, true);
   const inspector = await getPromptInspectorData();
   assert.ok(inspectorSchema.safeParse(inspector).success);
   assert.match(inspector.systemPrompt, /Локальный режим/);
   assert.equal((await generateCardFromAnswers(payload)).rating, 0);
   assert.equal(cleared, 3, 'All requests release their deadline timer');
+  assert.equal(cancelledBodies, 3, 'Stalled response bodies are cancelled at the deadline');
   globalThis.setTimeout = originalSetTimeout;
   globalThis.clearTimeout = originalClearTimeout;
 

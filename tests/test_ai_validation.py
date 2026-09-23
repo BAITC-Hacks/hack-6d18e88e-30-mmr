@@ -220,6 +220,21 @@ def test_schema_or_grounding_errors_trigger_fallback(monkeypatch, defect):
     assert result.fallbackUsed is True
 
 
+@pytest.mark.parametrize("draft,value,fallback", [
+    ("Нужен бот. Данные CSV не предоставим.", "Данные CSV", True),
+    ("Need an app. We do not provide CSV data.", "CSV data", True),
+    ("Бот керек. CSV деректері жоқ.", "CSV деректері", True),
+    ("Нужен бот. Данные CSV не предоставим.", "Данные CSV не предоставим.", False),
+    ("Нужен бот. Данные: CSV за 2025 год.", "CSV за 2025 год", False),
+])
+def test_provider_excerpts_preserve_negation_context(monkeypatch, draft, value, fallback):
+    output = provider_output()
+    output["detectedFields"] = {"availableData": {"value": value, "source": "draft"}}
+    output["missingFields"] = ["context", "constraints", "successCriteria"]
+    mock_provider(monkeypatch, content=json.dumps(output, ensure_ascii=False))
+    assert asyncio.run(ai_engine.analyze_draft_with_ai(draft)).fallbackUsed is fallback
+
+
 @pytest.mark.parametrize("status", [401, 429, 500])
 def test_http_errors_fall_back_without_logging_provider_body(monkeypatch, caplog, status):
     mock_provider(monkeypatch, status=status, body={"error": "secret-do-not-log"})

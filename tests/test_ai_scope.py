@@ -19,6 +19,7 @@ from services import ai_engine
 
 POLICY = json.loads((REPO_ROOT / "shared" / "aiScopePolicy.json").read_text(encoding="utf-8"))
 CASES = json.loads((REPO_ROOT / "tests" / "ai_scope_cases.json").read_text(encoding="utf-8"))
+FALLBACK_CASES = json.loads((REPO_ROOT / "tests" / "ai_fallback_cases.json").read_text(encoding="utf-8"))
 client = TestClient(app)
 
 
@@ -179,3 +180,13 @@ def test_inspector_documents_both_scope_and_output_controls():
     assert "PROMPT_INJECTION" in inspector["errorHandlingStrategy"]
     assert "canonical" in inspector["errorHandlingStrategy"].lower()
     assert "business" in inspector["systemPrompt"].lower()
+
+
+@pytest.mark.parametrize("case", FALLBACK_CASES)
+def test_fallback_preserves_negations_and_does_not_promote_retired_contacts(case):
+    analysis = ai_engine.local_fallback_analyze(case["draft"])
+    contact = analysis.detectedFields.get("contact")
+    assert (contact.value if contact else None) == case["contact"]
+    if "availableData" in case:
+        assert analysis.detectedFields["availableData"].value == case["availableData"]
+    assert all(value.value in case["draft"] for value in analysis.detectedFields.values() if value)

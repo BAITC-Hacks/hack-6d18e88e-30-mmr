@@ -4,6 +4,7 @@ import logging
 import math
 import os
 import re
+from pathlib import Path
 from threading import BoundedSemaphore
 from typing import Any, Dict
 
@@ -36,6 +37,7 @@ Analyze task completeness: context and need (20), data (20), expected result (15
 success criteria (15), constraints (10), users (10), contact and consultation format (10).
 Never invent facts, metrics, names, technology choices, or agreements.
 Every extracted value MUST be a verbatim excerpt of the user's draft, with source 'draft'.
+Preserve the entire sentence around any negation; never cut it into an affirmative fact.
 Only extract a field when the draft actually describes it; missing details stay missing.
 Select 3 to 4 relevant questions from the provided canonical questions by field.
 Use their exact Russian text, distinct fields and unique IDs; never write free-form answers.
@@ -173,7 +175,38 @@ QUESTION_ORDER = (
     "context", "need", "availableData", "targetUsers", "constraints",
     "expectedResult", "successCriteria", "contact", "consultationFormat", "title",
 )
-CONTACT_PATTERN = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|(?<!\w)@[a-zA-Z0-9_]+|(?<!\d)\+?\d{10,15}(?!\d)"
+FALLBACK_POLICY = json.loads((Path(__file__).resolve().parents[2] / "shared" / "aiFallbackPolicy.json").read_text(encoding="utf-8"))
+CONTACT_PATTERN = re.compile(FALLBACK_POLICY["contactPattern"], re.IGNORECASE)
+RETIRED_CONTACT_PATTERN = re.compile(FALLBACK_POLICY["retiredContactPattern"], re.IGNORECASE)
+PHONE_LABEL_PATTERN = re.compile(FALLBACK_POLICY["phoneLabelPattern"], re.IGNORECASE)
+NEGATION_PATTERN = re.compile(FALLBACK_POLICY["negationPattern"], re.IGNORECASE)
+
+
+def _is_supported_excerpt(text: str, excerpt: str, preserve_context: bool = True) -> bool:
+    quoted = " ".join(excerpt.split())
+    if quoted not in " ".join(text.split()):
+        return False
+    if not preserve_context:
+        return True
+    parts = [" ".join(part.split()) for part in re.split(r"(?<=[.!?])\s+|[\n;]+", text)]
+    containing = [part for part in parts if quoted in part]
+    return not containing or any(
+        not NEGATION_PATTERN.search(part) or part.rstrip(".!?") == quoted.rstrip(".!?")
+        for part in containing
+    )
+
+
+def _extract_contact(sentences: list[str]) -> str | None:
+    for sentence in sentences:
+        # Marker words inside an address/handle are data, e.g. old@example.com.
+        if RETIRED_CONTACT_PATTERN.search(CONTACT_PATTERN.sub(" ", sentence)):
+            continue
+        for match in CONTACT_PATTERN.finditer(sentence):
+            value = match.group(0)
+            # A long order/account number alone is not evidence of a phone contact.
+            if "@" in value or value.startswith("+") or PHONE_LABEL_PATTERN.search(sentence):
+                return value
+    return None
 
 
 def local_fallback_analyze(draft: str, industry: str = "") -> AnalyzeDraftResponse:
@@ -188,9 +221,9 @@ def local_fallback_analyze(draft: str, industry: str = "") -> AnalyzeDraftRespon
         excerpt = next((part for part in sentences if re.search(pattern, part, re.IGNORECASE)), None)
         if excerpt:
             detected[field] = ExtractedField(value=excerpt, confidence=0.7)
-    contact = re.search(CONTACT_PATTERN, text)
+    contact = _extract_contact(sentences)
     if contact:
-        detected["contact"] = ExtractedField(value=contact.group(0), confidence=0.95)
+        detected["contact"] = ExtractedField(value=contact, confidence=0.95)
 
     missing = [field for field in TASK_FIELDS if field not in detected]
     question_fields = [field for field in QUESTION_ORDER if field in missing][:4]
@@ -260,10 +293,9 @@ async def analyze_draft_with_ai(draft: str, industry: str = "") -> AnalyzeDraftR
     try:
         content = await asyncio.wait_for(request_analysis(), timeout=AI_TIMEOUT_SECONDS)
         analysis = DraftAnalysis.model_validate(_json_from_text(content))
-        normalized_draft = " ".join(draft.split())
-        for extracted in analysis.detectedFields.values():
+        for field, extracted in analysis.detectedFields.items():
             if extracted is not None and (
-                extracted.source != "draft" or " ".join(extracted.value.split()) not in normalized_draft
+                extracted.source != "draft" or not _is_supported_excerpt(draft, extracted.value, field != "title")
             ):
                 raise ValueError("Extracted fact is not supported by the draft")
         # The model may select fields, but cannot send arbitrary question/reason text to users.

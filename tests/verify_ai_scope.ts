@@ -20,6 +20,17 @@ for (const testCase of cases) {
 for (const draft of seedDrafts) assert.doesNotThrow(() => assertTaskScope(draft.text, draft.industry));
 for (const task of seedTasks) assert.doesNotThrow(() => assertTaskScope(task.context + ' ' + task.need, task.industry), task.id);
 
+const fallbackCases: { draft: string; contact: string | null; availableData?: string }[] =
+  JSON.parse(readFileSync(new URL('./ai_fallback_cases.json', import.meta.url), 'utf8'));
+for (const testCase of fallbackCases) {
+  const analysis = localAnalyzeDraft(testCase.draft);
+  assert.equal(analysis.detectedFields.contact?.value ?? null, testCase.contact, testCase.draft);
+  if (testCase.availableData) assert.equal(analysis.detectedFields.availableData?.value, testCase.availableData);
+  for (const extracted of Object.values(analysis.detectedFields)) {
+    if (extracted) assert.ok(testCase.draft.includes(extracted.value), 'Fallback excerpts preserve original facts and negations.');
+  }
+}
+
 const originalFetch = globalThis.fetch;
 try {
   let calls = 0;

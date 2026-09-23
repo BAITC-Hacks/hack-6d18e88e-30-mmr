@@ -13,6 +13,8 @@ CANONICAL_QUESTIONS = POLICY["questions"]
 INJECTION_PATTERNS = tuple(re.compile(pattern, re.IGNORECASE) for pattern in POLICY["injectionPatterns"])
 OFF_TOPIC_PATTERNS = tuple(re.compile(pattern, re.IGNORECASE) for pattern in POLICY["offTopicPatterns"])
 TOPIC_PATTERNS = tuple(re.compile(pattern, re.IGNORECASE) for pattern in POLICY["topicPatterns"])
+WORK_CONTEXT_PATTERNS = tuple(re.compile(pattern, re.IGNORECASE) for pattern in POLICY["workContextPatterns"])
+WORK_INTENT_PATTERNS = tuple(re.compile(pattern, re.IGNORECASE) for pattern in POLICY["workIntentPatterns"])
 INVISIBLE_CHARACTERS = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]")
 
 
@@ -44,5 +46,10 @@ def ensure_ai_scope(draft: str, industry: str = "", answers: Iterable[str] = ())
     if any(pattern.search(text) for text in clauses for pattern in OFF_TOPIC_PATTERNS):
         raise ScopeViolation("OFF_TOPIC")
     # Industry and answer keywords cannot turn an unrelated draft into a business task.
-    if not any(pattern.search(normalized[0]) for pattern in TOPIC_PATTERNS):
+    # Accept everyday work descriptions without demanding software/business jargon.
+    has_task_context = any(pattern.search(normalized[0]) for pattern in TOPIC_PATTERNS) or (
+        any(pattern.search(normalized[0]) for pattern in WORK_CONTEXT_PATTERNS)
+        and any(pattern.search(normalized[0]) for pattern in WORK_INTENT_PATTERNS)
+    )
+    if not has_task_context:
         raise ScopeViolation("OFF_TOPIC")

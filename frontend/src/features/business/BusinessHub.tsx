@@ -10,6 +10,7 @@ import { TaskDetails } from '../catalog/TaskDetails';
 import { MilestoneTracker } from '../milestones/MilestoneTracker';
 import { ActivityTimeline } from '../demo/ActivityTimeline';
 import { proposalLabels } from '../proposals/proposalLabels';
+import { openTaskEditor } from '../builder/openTaskEditor';
 import type { Proposal } from '../../types/proposal';
 import type { Task } from '../../types/task';
 import '../catalog/workspace.css';
@@ -55,7 +56,7 @@ export function BusinessHub({ view }: { view: 'overview' | 'tasks' | 'proposals'
   function taskList(items: Task[]) { return <div className="business-task-list">{items.map((task) => {
     const responses = proposals.filter((proposal) => proposal.taskId === task.id);
     const chosen = responses.filter((proposal) => proposal.status === 'selected').length;
-    return <article className="business-task-row" key={task.id}><div className="business-task-info"><div className="tags"><span className="eyebrow">{task.industry}</span><span className={`badge ${task.published ? '' : 'tag'}`}>{task.published ? 'Опубликована' : 'Не опубликована'}</span></div><h3><button className="text-button task-title-button" onClick={() => setDetailsId(task.id)}>{task.title}</button></h3><ReadinessBadge score={task.rating} /></div><div className="task-row-stat"><strong>{task.rating}</strong><span>готовность</span></div><div className="task-row-stat"><strong>{responses.length}</strong><span>откликов</span></div><div className="task-row-stat"><strong>{chosen}</strong><span>команд выбрано</span></div><Button variant="secondary" onClick={() => { if (task.published) openProposals(task); else { setActiveTask(task.id); navigate('builder'); } }}>{task.published ? 'Открыть отклики' : 'Продолжить карточку'}<span aria-hidden="true">↗</span></Button></article>;
+    return <article className="business-task-row" key={task.id}><div className="business-task-info"><div className="tags"><span className="eyebrow">{task.industry}</span><span className={`badge ${task.published ? '' : 'tag'}`}>{task.published ? 'Опубликована' : 'Не опубликована'}</span></div><h3><button className="text-button task-title-button" onClick={() => setDetailsId(task.id)}>{task.title}</button></h3><div className="button-row"><ReadinessBadge score={task.rating} />{task.published && <Button variant="ghost" onClick={() => openTaskEditor(task.id)}>Редактировать карточку</Button>}</div></div><div className="task-row-stat"><strong>{task.rating}</strong><span>готовность</span></div><div className="task-row-stat"><strong>{responses.length}</strong><span>откликов</span></div><div className="task-row-stat"><strong>{chosen}</strong><span>команд выбрано</span></div><Button variant="secondary" onClick={() => { if (task.published) openProposals(task); else { setActiveTask(task.id); navigate('builder'); } }}>{task.published ? 'Открыть отклики' : 'Продолжить карточку'}<span aria-hidden="true">↗</span></Button></article>;
   })}</div>; }
 
   return <div className="stack workspace-page">
