@@ -3,6 +3,8 @@
 import os
 import sys
 
+import pytest
+
 # Ensure backend folder is on python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend")))
 
@@ -11,6 +13,13 @@ from main import app
 from services.ai_engine import local_fallback_analyze, _json_from_text
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def disable_external_ai(monkeypatch):
+    """The core suite must stay offline even when the developer configured API keys."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
 
 
 def test_health_check():

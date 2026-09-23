@@ -2,6 +2,7 @@ import type { Task } from '../types/task';
 import type { Team } from '../types/team';
 import type { Proposal } from '../types/proposal';
 import type { TaskDraftSeed } from '../types/ai';
+import { calculateRating, getReadinessLevel } from '../services/ratingService';
 
 export const seedDrafts: TaskDraftSeed[] = [
   {
@@ -46,7 +47,7 @@ export const seedDrafts: TaskDraftSeed[] = [
   },
 ];
 
-export const seedTasks: Task[] = [
+const seedTaskInputs: Omit<Task, 'rating' | 'readinessLevel'>[] = [
   {
     id: 'task-1',
     title: 'AI-классификатор входящих платежных инцидентов и эквайринга',
@@ -62,8 +63,6 @@ export const seedTasks: Task[] = [
     contact: 'Руководитель группы поддержки: support-lead@bankpay.kz, Telegram: @fintech_support_lead',
     consultationFormat: 'Еженедельные 30-минутные синхроны по вторникам в Google Meet + чат в Telegram для оперативных вопросов.',
     confirmedFields: ['title', 'context', 'need', 'targetUsers', 'availableData', 'constraints', 'expectedResult', 'successCriteria', 'contact', 'consultationFormat'],
-    rating: 95,
-    readinessLevel: 'priority',
     confirmed: true,
     published: true,
     createdAt: '2026-09-20T10:00:00.000Z',
@@ -84,8 +83,6 @@ export const seedTasks: Task[] = [
     contact: 'Инфраструктурный инженер: devops@cloudpulse.kz',
     consultationFormat: 'Письменная обратная связь в issues репозитория + звонок раз в две недели.',
     confirmedFields: ['title', 'context', 'need', 'targetUsers', 'availableData', 'constraints', 'expectedResult', 'successCriteria', 'contact', 'consultationFormat'],
-    rating: 85,
-    readinessLevel: 'ready',
     confirmed: true,
     published: true,
     createdAt: '2026-09-21T09:00:00.000Z',
@@ -106,8 +103,6 @@ export const seedTasks: Task[] = [
     contact: 'Координатор проекта SmartCity: road-monitoring@astana.gov.kz',
     consultationFormat: 'Консультации через чат в Telegram по пятницам.',
     confirmedFields: ['title', 'context', 'need', 'targetUsers', 'availableData', 'expectedResult', 'contact'],
-    rating: 78,
-    readinessLevel: 'ready',
     confirmed: true,
     published: true,
     createdAt: '2026-09-19T14:00:00.000Z',
@@ -128,8 +123,6 @@ export const seedTasks: Task[] = [
     contact: 'Операционный директор: ops@fitlife.kz',
     consultationFormat: 'Еженедельный созвон в Zoom.',
     confirmedFields: ['title', 'context', 'need', 'targetUsers', 'availableData', 'expectedResult'],
-    rating: 65,
-    readinessLevel: 'working',
     confirmed: true,
     published: true,
     createdAt: '2026-09-22T08:00:00.000Z',
@@ -150,14 +143,19 @@ export const seedTasks: Task[] = [
     contact: 'Telegram: @cowork_admin',
     consultationFormat: 'В Telegram.',
     confirmedFields: ['title', 'context', 'need', 'contact'],
-    rating: 30,
-    readinessLevel: 'draft',
     confirmed: true,
     published: true,
     createdAt: '2026-09-23T07:00:00.000Z',
     updatedAt: '2026-09-23T07:00:00.000Z',
   },
 ];
+
+// Keep catalog cards and the rating inspector on the same scoring formula.
+export const seedTasks: Task[] = seedTaskInputs.map((input) => {
+  const task: Task = { ...input, rating: 0, readinessLevel: 'draft' };
+  const rating = calculateRating(task).total;
+  return { ...task, rating, readinessLevel: getReadinessLevel(rating) };
+});
 
 export const seedTeams: Team[] = [
   {

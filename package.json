@@ -1,0 +1,9 @@
+{
+  "name": "ai-sana-platform",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node tests/run_checks.mjs",
+    "test": "npm --prefix frontend test"
+  }
+}

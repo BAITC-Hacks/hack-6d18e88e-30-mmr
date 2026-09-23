@@ -1,26 +1,43 @@
-import type { Task, ReadinessLevel } from '../types/task';
+﻿import type { Task, ReadinessLevel } from '../types/task';
 import type { RatingBreakdown, RatingRecommendation } from '../types/rating';
 
-/**
- * Validates whether a text field has substantive content (not empty, not trivial placeholders).
- * Evaluates length and informative depth.
- */
-function evaluateFieldQuality(value?: string, minChars = 35): number {
-  if (!value) return 0;
-  const cleaned = value.trim();
+type RatingField = 'context' | 'need' | 'availableData' | 'expectedResult'
+  | 'successCriteria' | 'constraints' | 'targetUsers' | 'contact' | 'consultationFormat';
+type RatingCategory = Exclude<keyof RatingBreakdown, 'total' | 'potentialTotal' | 'recommendations'>;
+
+const criteria: {
+  field: RatingField;
+  category: RatingCategory;
+  weight: number;
+  minChars: number;
+  instruction: string;
+}[] = [
+  { field: 'context', category: 'contextNeed', weight: 10, minChars: 45, instruction: 'Опишите текущее состояние процессов' },
+  { field: 'need', category: 'contextNeed', weight: 10, minChars: 40, instruction: 'Опишите проблему бизнеса и необходимое изменение' },
+  { field: 'availableData', category: 'data', weight: 20, minChars: 45, instruction: 'Укажите доступные данные, форматы и примеры или источники' },
+  { field: 'expectedResult', category: 'expectedResult', weight: 15, minChars: 35, instruction: 'Опишите конкретный результат работы команды: MVP, сервис или документацию' },
+  { field: 'successCriteria', category: 'successCriteria', weight: 15, minChars: 35, instruction: 'Задайте измеримые критерии приемки решения' },
+  { field: 'constraints', category: 'constraints', weight: 10, minChars: 25, instruction: 'Укажите сроки, технологии и ограничения доступа' },
+  { field: 'targetUsers', category: 'users', weight: 10, minChars: 25, instruction: 'Опишите пользователей и сценарии использования' },
+  { field: 'contact', category: 'businessCommunication', weight: 5, minChars: 10, instruction: 'Укажите контакт куратора задачи' },
+  { field: 'consultationFormat', category: 'businessCommunication', weight: 5, minChars: 20, instruction: 'Опишите формат консультаций и порядок обратной связи' },
+];
+
+/** A transparent completeness heuristic, not a semantic assessment of the text. */
+function evaluateFieldQuality(value: string, minChars: number): number {
+  const cleaned = value.trim().replace(/\s+/g, ' ');
+  const marker = cleaned.toLowerCase().replace(/ё/g, 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  if (!marker || /^(?:не указан[оыа]?|не определен[оыа]?|не заполнен[оыа]?|неизвестно|нет данных|не знаю|требует уточнения|требуют уточнения|требуется уточнение|нужно уточнить|уточнить|будет уточнено|пока неизвестно|unknown|not specified|not provided|to be determined|tbd|todo|n a)(?:\s|$)/u.test(marker)) {
+    return 0;
+  }
   if (cleaned.length < 5) return 0;
+  // Short, usable contacts should not need padding to receive their full weight.
+  if (cleaned.length >= minChars) return 1;
   if (cleaned.length < 20) return 0.4;
-  if (cleaned.length < minChars) return 0.75;
-  return 1.0;
+  return 0.75;
 }
 
-/**
- * Calculates task readiness level based on hackathon score boundaries:
- * 0–39: draft
- * 40–69: working
- * 70–89: ready
- * 90–100: priority
- */
+/** Hackathon readiness boundaries: 0–39, 40–69, 70–89 and 90–100. */
 export function getReadinessLevel(score: number): ReadinessLevel {
   if (score >= 90) return 'priority';
   if (score >= 70) return 'ready';
@@ -29,129 +46,43 @@ export function getReadinessLevel(score: number): ReadinessLevel {
 }
 
 /**
- * Evaluates the task readiness rating according to HackAlem AI criteria (0-100 pts):
- * CRITICAL RULE (Section 4): "Баллы начисляются только за заполненные и подтверждённые поля".
- * 
- * Weights:
- * - Context & Need: 20 pts
- * - Data & Materials: 20 pts
- * - Expected Result: 15 pts
- * - Success Criteria: 15 pts
- * - Constraints: 10 pts
- * - Target Users: 10 pts
- * - Business Communication: 10 pts
+ * Only filled, confirmed fields earn actual points (20/20/15/15/10/10/10).
+ * Potential points show what confirming the current text would earn; they do
+ * not assume that missing information will be supplied. Recommendations show
+ * the gain from completing and confirming one specific field to its full weight.
  */
 export function calculateRating(task: Task): RatingBreakdown {
-  const recommendations: RatingRecommendation[] = [];
   const confirmed = new Set(task.confirmedFields || []);
-
-  // Helper: check if field is confirmed
-  const isConfirmed = (fieldName: string) => confirmed.has(fieldName);
-
-  // 1. Context & Need (20 pts: 10 for context, 10 for need)
-  const hasContext = isConfirmed('context');
-  const hasNeed = isConfirmed('need');
-  const contextQ = hasContext ? evaluateFieldQuality(task.context, 45) : 0;
-  const needQ = hasNeed ? evaluateFieldQuality(task.need, 40) : 0;
-  const contextNeed = Math.round(contextQ * 10 + needQ * 10);
-  if (contextNeed < 20) {
-    recommendations.push({
-      field: 'context',
-      message: 'Подробнее опишите текущее состояние процессов и подтвердите проблему бизнеса',
-      possibleGain: 20 - contextNeed,
-    });
-  }
-
-  // 2. Data & Materials (20 pts)
-  const hasData = isConfirmed('availableData');
-  const dataQ = hasData ? evaluateFieldQuality(task.availableData, 45) : 0;
-  const data = Math.round(dataQ * 20);
-  if (data < 20) {
-    recommendations.push({
-      field: 'availableData',
-      message: 'Укажите доступные данные, форматы файлов (CSV/JSON/API), примеры или доступы (+20 б.)',
-      possibleGain: 20 - data,
-    });
-  }
-
-  // 3. Expected Result (15 pts)
-  const hasResult = isConfirmed('expectedResult');
-  const resultQ = hasResult ? evaluateFieldQuality(task.expectedResult, 35) : 0;
-  const expectedResult = Math.round(resultQ * 15);
-  if (expectedResult < 15) {
-    recommendations.push({
-      field: 'expectedResult',
-      message: 'Зафиксируйте конкретный артефакт сдачи (MVP, репозиторий в GitHub, документация) (+15 б.)',
-      possibleGain: 15 - expectedResult,
-    });
-  }
-
-  // 4. Success Criteria (15 pts)
-  const hasSuccess = isConfirmed('successCriteria');
-  const successQ = hasSuccess ? evaluateFieldQuality(task.successCriteria, 35) : 0;
-  const successCriteria = Math.round(successQ * 15);
-  if (successCriteria < 15) {
-    recommendations.push({
-      field: 'successCriteria',
-      message: 'Задайте измеримые критерии приемки решения (точность, метрики F1, SLA, скорость) (+15 б.)',
-      possibleGain: 15 - successCriteria,
-    });
-  }
-
-  // 5. Constraints (10 pts)
-  const hasConstraints = isConfirmed('constraints');
-  const constraintsQ = hasConstraints ? evaluateFieldQuality(task.constraints, 25) : 0;
-  const constraints = Math.round(constraintsQ * 10);
-  if (constraints < 10) {
-    recommendations.push({
-      field: 'constraints',
-      message: 'Укажите дедлайны, требуемый стек технологий или ограничения доступа (+10 б.)',
-      possibleGain: 10 - constraints,
-    });
-  }
-
-  // 6. Target Users (10 pts)
-  const hasUsers = isConfirmed('targetUsers');
-  const usersQ = hasUsers ? evaluateFieldQuality(task.targetUsers, 25) : 0;
-  const users = Math.round(usersQ * 10);
-  if (users < 10) {
-    recommendations.push({
-      field: 'targetUsers',
-      message: 'Опишите целевую аудиторию и сценарии использования (+10 б.)',
-      possibleGain: 10 - users,
-    });
-  }
-
-  // 7. Business Communication & Contacts (10 pts: 5 contact, 5 format)
-  const hasContact = isConfirmed('contact');
-  const hasFormat = isConfirmed('consultationFormat');
-  const contactQ = hasContact ? evaluateFieldQuality(task.contact, 10) : 0;
-  const formatQ = hasFormat ? evaluateFieldQuality(task.consultationFormat, 20) : 0;
-  const businessCommunication = Math.round(contactQ * 5 + formatQ * 5);
-  if (businessCommunication < 10) {
-    recommendations.push({
-      field: 'contact',
-      message: 'Укажите контакты куратора и подтвердите регулярный формат консультаций (+10 б.)',
-      possibleGain: 10 - businessCommunication,
-    });
-  }
-
-  const total = contextNeed + data + expectedResult + successCriteria + constraints + users + businessCommunication;
-  const potentialTotal = 100;
-
-  // Sort recommendations by highest possible gain first
-  recommendations.sort((a, b) => b.possibleGain - a.possibleGain);
-
-  return {
-    contextNeed,
-    data,
-    expectedResult,
-    successCriteria,
-    constraints,
-    users,
-    businessCommunication,
-    total,
-    potentialTotal,
+  const recommendations: RatingRecommendation[] = [];
+  const breakdown: RatingBreakdown = {
+    contextNeed: 0,
+    data: 0,
+    expectedResult: 0,
+    successCriteria: 0,
+    constraints: 0,
+    users: 0,
+    businessCommunication: 0,
+    total: 0,
+    potentialTotal: 0,
     recommendations,
   };
+
+  for (const { field, category, weight, minChars, instruction } of criteria) {
+    const potentialPoints = Math.round(evaluateFieldQuality(task[field], minChars) * weight);
+    const points = confirmed.has(field) ? potentialPoints : 0;
+    breakdown[category] += points;
+    breakdown.total += points;
+    breakdown.potentialTotal += potentialPoints;
+
+    if (points < weight) {
+      const possibleGain = weight - points;
+      const action = potentialPoints === weight
+        ? `${instruction}: проверьте и подтвердите заполненное поле`
+        : `${instruction} и подтвердите поле`;
+      recommendations.push({ field, message: `${action} (+${possibleGain} б.)`, possibleGain });
+    }
+  }
+
+  recommendations.sort((a, b) => b.possibleGain - a.possibleGain);
+  return breakdown;
 }

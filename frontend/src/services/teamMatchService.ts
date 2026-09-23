@@ -1,4 +1,4 @@
-import type { Task } from '../types/task';
+﻿import type { Task } from '../types/task';
 import type { Team } from '../types/team';
 
 export interface TeamMatchResult {
@@ -10,98 +10,71 @@ export interface TeamMatchResult {
   matchedTags: string[];
 }
 
-function normalize(str: string): string {
-  return str.toLowerCase().replace(/[^a-zа-я0-9]/gi, '');
+/** Keep word boundaries and C++/C#; normalize both the task and profile labels. */
+function normalize(value: string): string {
+  return value.normalize('NFKC').toLowerCase()
+    .replace(/(?<=\p{L})\.(?=\p{L})/gu, '')
+    .replace(/[^\p{L}\p{N}+#]+/gu, ' ')
+    .trim();
+}
+
+function containsLabel(text: string, label: string): boolean {
+  return label.length > 0 && ` ${text} `.includes(` ${label} `);
+}
+
+function uniqueLabels(labels: string[]): Map<string, string> {
+  const result = new Map<string, string>();
+  for (const label of labels) {
+    const normalized = normalize(label);
+    if (normalized && !result.has(normalized)) result.set(normalized, label.trim());
+  }
+  return result;
 }
 
 /**
- * Calculates matching score between a task and a student team.
- * Returns breakdown in percentages (0-100).
+ * Explainable profile relevance (0–100), independent of progress points and
+ * task readiness. It never selects teams or restricts access to published tasks.
  */
 export function calculateTeamMatch(task: Task, team: Team): TeamMatchResult {
-  const taskText = `${task.title} ${task.industry} ${task.tags.join(' ')} ${task.need} ${task.constraints} ${task.expectedResult}`.toLowerCase();
-  const matchedTags: string[] = [];
+  const taskText = normalize([
+    task.title, task.industry, ...task.tags, task.context, task.need,
+    task.targetUsers, task.availableData, task.constraints, task.expectedResult,
+  ].join(' '));
+  const matched = new Map<string, string>();
 
-  // 1. Technologies match (35%)
-  let techMatches = 0;
-  if (team.technologies.length > 0) {
-    for (const tech of team.technologies) {
-      const normTech = normalize(tech);
-      if (normTech && taskText.includes(normTech)) {
-        techMatches++;
-        if (!matchedTags.includes(tech)) matchedTags.push(tech);
+  const scoreLabels = (labels: string[], targetMatches: number): number => {
+    const unique = uniqueLabels(labels);
+    if (unique.size === 0) return 0;
+    let count = 0;
+    for (const [normalized, label] of unique) {
+      if (containsLabel(taskText, normalized)) {
+        count++;
+        if (!matched.has(normalized)) matched.set(normalized, label);
       }
     }
-  }
-  const techScore = team.technologies.length > 0 
-    ? Math.min(100, Math.round((techMatches / Math.min(team.technologies.length, 4)) * 100))
-    : 50;
-
-  // 2. Skills match (25%)
-  let skillMatches = 0;
-  if (team.skills.length > 0) {
-    for (const skill of team.skills) {
-      const normSkill = normalize(skill);
-      if (normSkill && taskText.includes(normSkill)) {
-        skillMatches++;
-        if (!matchedTags.includes(skill)) matchedTags.push(skill);
-      }
-    }
-  }
-  const skillScore = team.skills.length > 0
-    ? Math.min(100, Math.round((skillMatches / Math.min(team.skills.length, 3)) * 100))
-    : 50;
-
-  // 3. Interests match (20%)
-  let interestMatches = 0;
-  if (team.interests.length > 0) {
-    for (const interest of team.interests) {
-      const normInterest = normalize(interest);
-      if (normInterest && taskText.includes(normInterest)) {
-        interestMatches++;
-        if (!matchedTags.includes(interest)) matchedTags.push(interest);
-      }
-    }
-  }
-  const interestScore = team.interests.length > 0
-    ? Math.min(100, Math.round((interestMatches / Math.min(team.interests.length, 3)) * 100))
-    : 50;
-
-  // 4. Industry match (20%)
-  let industryScore = 30; // base compatibility
-  const normTaskIndustry = normalize(task.industry);
-  if (team.industries.some((ind) => normalize(ind) === normTaskIndustry || taskText.includes(normalize(ind)))) {
-    industryScore = 100;
-    matchedTags.push(task.industry);
-  }
-
-  // Weighted total (35% tech + 25% skills + 20% interests + 20% industry)
-  const total = Math.round(
-    techScore * 0.35 +
-    skillScore * 0.25 +
-    interestScore * 0.20 +
-    industryScore * 0.20
-  );
-
-  return {
-    total: Math.max(10, Math.min(100, total)),
-    technologies: techScore,
-    skills: skillScore,
-    interests: interestScore,
-    industry: industryScore,
-    matchedTags,
+    return Math.min(100, Math.round(count / Math.min(unique.size, targetMatches) * 100));
   };
+
+  const technologies = scoreLabels(team.technologies, 4);
+  const skills = scoreLabels(team.skills, 3);
+  const interests = scoreLabels(team.interests, 3);
+  const taskIndustry = normalize(task.industry);
+  let industry = 0;
+  for (const [normalized, label] of uniqueLabels(team.industries)) {
+    if (containsLabel(taskIndustry, normalized)) {
+      industry = 100;
+      if (!matched.has(normalized)) matched.set(normalized, label);
+    }
+  }
+
+  const total = Math.round(technologies * 0.35 + skills * 0.25 + interests * 0.20 + industry * 0.20);
+  return { total, technologies, skills, interests, industry, matchedTags: [...matched.values()] };
 }
 
-/**
- * Returns tasks sorted by compatibility for a given student team.
- */
+/** Returns every published task, including low readiness and low relevance. */
 export function getRecommendedTasksForTeam(team: Team, tasks: Task[]): { task: Task; match: TeamMatchResult }[] {
   return tasks
     .filter((task) => task.published)
-    .map((task) => ({
-      task,
-      match: calculateTeamMatch(task, team),
-    }))
-    .sort((a, b) => b.match.total - a.match.total);
+    .map((task) => ({ task, match: calculateTeamMatch(task, team) }))
+    .sort((a, b) => b.match.total - a.match.total || b.task.rating - a.task.rating || a.task.id.localeCompare(b.task.id));
 }
