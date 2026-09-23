@@ -13,6 +13,7 @@ interface ProfilePanelProps {
   onResendVerification: () => void;
   onLogout: () => void;
   onDemo?: () => void;
+  onWorkspace?: () => void;
 }
 
 type ProfileIconName = 'mail' | 'shield' | 'check' | 'arrow' | 'logout' | 'spark' | 'business' | 'student';
@@ -62,6 +63,7 @@ export default function ProfilePanel({
   onResendVerification,
   onLogout,
   onDemo,
+  onWorkspace,
 }: ProfilePanelProps) {
   const preferencesId = useId();
   const name = account.full_name.trim() || 'Участник AI Sana';
@@ -141,6 +143,8 @@ export default function ProfilePanel({
         <p className="sana-account-kicker">Ваша следующая глава</p>
         <h2 id="sana-account-next-title">{role.title}</h2>
         <p className="sana-account-card-description">{role.description}</p>
+        {onWorkspace && <button className="sana-account-button sana-account-button--primary" type="button" disabled={busy} onClick={onWorkspace}>Открыть платформу<ProfileIcon name="arrow" /></button>}
+        {onWorkspace && <p className="sana-account-service-note">Задачи и отклики пока доступны в демо и сохраняются в этом браузере.</p>}
         {onDemo && <button className="sana-account-button sana-account-button--text" type="button" disabled={busy} onClick={onDemo}>Открыть демо<ProfileIcon name="arrow" /></button>}
       </section>
     </div>

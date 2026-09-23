@@ -2,6 +2,7 @@
 
 Главная страница аккаунта теперь находится в React: **http://localhost:5173**.
 Регистрация, вход, восстановление, новый пароль, профиль и подписка оформлены в одном интерфейсе.
+В этот же FastAPI объединены анализ бизнес-задач, уточняющие вопросы, сборка карточки и Prompt Inspector из ветки `alim`.
 
 Поддерживаются два режима:
 
@@ -19,7 +20,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
 # Только если .env ещё не существует:
 Copy-Item .env.example .env
-.\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload --port 8000
+.\.venv\Scripts\python.exe -m uvicorn backend.main:app --host 127.0.0.1 --reload --port 8000 --no-proxy-headers
 ```
 
 В другом терминале:
@@ -31,7 +32,8 @@ npm run dev
 ```
 
 Существующую `.venv` можно использовать повторно. Старый запуск `uvicorn main:app` из `backend` тоже поддерживается.
-`.env` бэкенда читается из корня репозитория, frontend читает `frontend/.env.local`.
+`.env` бэкенда читается из корня репозитория; необязательный `backend/.env` дополняет отсутствующие переменные.
+Существующие переменные процесса имеют приоритет. Frontend читает `frontend/.env.local`.
 
 - Аккаунт: http://localhost:5173
 - Предпросмотр письма сброса: http://localhost:8000/email-preview/recovery
@@ -39,6 +41,28 @@ npm run dev
 - Swagger: http://localhost:8000/docs
 - Health: http://localhost:8000/health
 - Старые локальные формы / отписка от новостей: http://localhost:8000/account
+
+## AI и общие ограничения API
+
+- `POST /api/ai/analyze` принимает `draft` и необязательный `industry`, возвращает извлечённые поля и минимум три вопроса.
+- `POST /api/ai/generate-card` принимает черновик и ответы, возвращает редактируемую неподтверждённую карточку.
+- `GET /api/ai/inspector` показывает промпты, схемы и правила обработки ошибок.
+
+Без AI-ключей работает локальный fallback. Для внешнего анализа задайте серверный `OPENAI_API_KEY` или `NVIDIA_API_KEY`,
+при необходимости `AI_MODEL`; если заполнены оба ключа, используется OpenAI. AI не подтверждает и не публикует карточку.
+Файл `shared/aiScopePolicy.json` нужен и backend, и frontend. Ошибки тематики `OFF_TOPIC`/`PROMPT_INJECTION`
+возвращаются как HTTP 422 и не обходятся локальным fallback. Подробности формулы рейтинга и сценария — в корневом README.
+
+Development принимает только loopback-клиентов и разрешённые Host/Origin. `--no-proxy-headers` сохраняет эту проверку.
+На всех API действуют лимиты запросов и строгая JSON-валидация; cookie-операции дополнительно требуют доверенный Origin.
+При `APP_ENV=production` обязательны `API_ALLOWED_HOSTS`, HTTPS `API_ALLOWED_ORIGINS` и серверный `API_ACCESS_TOKEN`
+из 32–256 символов; Swagger отключается, локальные cookie становятся Secure.
+При явно заданном `CORS_ORIGINS` он тоже должен содержать только разрешённые HTTPS origins в production.
+
+Deployment bearer-токен защищает AI-маршруты и предназначен для серверного gateway, который проверяет доступ пользователя.
+Его нельзя помещать в браузер или `VITE_*`. Зарегистрированные account/mail-маршруты проверяют свои cookie/одноразовые токены
+либо пользовательский Supabase bearer; `/api/auth/config` доступен для определения режима.
+Неизвестные пути и методы не получают исключение из deployment-проверки. Готовый серверный gateway в проект не входит.
 
 ## Подключение Supabase
 
@@ -126,7 +150,7 @@ HTML-шаблоны оформлены в стиле Aurora Glass: тёмная 
 Изменение `.env` само по себе не меняет настройки уже работающего процесса.
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload --port 8000
+.\.venv\Scripts\python.exe -m uvicorn backend.main:app --host 127.0.0.1 --reload --port 8000 --no-proxy-headers
 ```
 
 Откройте http://localhost:5173 и запросите новое подтверждение или восстановление пароля.
@@ -196,16 +220,15 @@ SQLite в Supabase-режиме используется только для л�
 ## Проверки
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/test_accounts.py tests/test_supabase_backend.py -q
-cd frontend
-npm test
-npm run build
-cd ..
+npm run check
 node supabase/tests/run-migrations.mjs
 ```
 
-Тесты используют временные базы, подменённые Supabase/SMTP ответы и PostgreSQL WASM. Реальных писем не отправляют.
+`npm run check` объединяет Python-тесты, smoke локального сервера, frontend regression suites, lint и production build.
+Только backend: `.\.venv\Scripts\python.exe -m pytest tests -q`.
+Тесты используют временные базы, подменённые AI/Supabase/SMTP ответы и PostgreSQL WASM. Реальных писем не отправляют.
 Облачные миграции, реальные настройки Auth и доставку на почту надо проверить отдельно после подключения проекта.
 
-Выполненные изменения не реализуют конструктор задач, рейтинг или AI: `/api/ai/analyze` пока остаётся исходной заглушкой.
-Существующий переключатель ролей сохранён за кнопкой «Открыть демо»; это демо-интерфейс, не источник серверных прав.
+Конструктор, рейтинг, каталог, отклики и ручной выбор команды используют объединённый frontend.
+Задачи и отклики пока сохраняются в LocalStorage браузера, а не в общей серверной базе.
+Демо-переключатель ролей не является источником серверных прав; аккаунты и их письма обслуживаются отдельно.

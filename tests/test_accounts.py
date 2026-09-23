@@ -327,8 +327,10 @@ def test_health_account_and_existing_ai_contract(client):
     assert client.get("/email-preview/confirmation").status_code == 200
     assert client.get("/email-preview/unknown").status_code == 422
     assert client.get("/api/auth/me").headers["cache-control"] == "no-store"
-    result = client.post("/api/ai/analyze", json={"draft": "A test draft"})
-    assert result.json()["provider"] == "stub"
+    result = client.post("/api/ai/analyze", json={"draft": "Нужен бот для автоматизации обработки заявок клиентов"})
+    assert result.status_code == 200
+    assert result.json()["provider"] == "local-fallback-nlp"
+    assert result.json()["fallbackUsed"] is True
 
 
 def test_frontend_cors_and_https_cookie(client):

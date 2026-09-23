@@ -1,11 +1,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const projectUrl = import.meta.env.VITE_SUPABASE_URL?.trim() ?? '';
-const publicKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? '';
+const projectUrl = import.meta.env?.VITE_SUPABASE_URL?.trim() ?? '';
+const publicKey = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? '';
 
 // An incomplete Supabase setup must never create a second, local identity.
 export const authProvider: 'local' | 'supabase' =
-  projectUrl || publicKey || !import.meta.env.DEV ? 'supabase' : 'local';
+  projectUrl || publicKey || import.meta.env?.DEV === false ? 'supabase' : 'local';
 
 let client: SupabaseClient | undefined;
 let storageKey = '';

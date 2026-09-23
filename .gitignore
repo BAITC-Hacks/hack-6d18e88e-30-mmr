@@ -1,5 +1,7 @@
+env
 .env
 .env.local
+skills/
 node_modules/
 .pnpm-store/
 dist/

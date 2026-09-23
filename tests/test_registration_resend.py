@@ -114,8 +114,10 @@ def test_duplicate_enqueue_failure_rolls_back_token_rotation(client):
     token = latest_verification_token(client)
     # Token rotation occurs before queue insertion; both must roll back together.
     with patch("backend.services.mail.enqueue", side_effect=RuntimeError("queue unavailable")):
-        with pytest.raises(RuntimeError, match="queue unavailable"):
-            client.post("/api/auth/register", json=REGISTRATION)
+        response = client.post("/api/auth/register", json=REGISTRATION)
+    assert response.status_code == 500
+    assert response.json()["detail"]["code"] == "INTERNAL_ERROR"
+    assert "queue unavailable" not in response.text
     with connect(client.app.state.settings) as db:
         assert db.execute("SELECT COUNT(*) FROM outbox").fetchone()[0] == 1
     assert client.post("/api/auth/verify-email", json={"token": token}).status_code == 200

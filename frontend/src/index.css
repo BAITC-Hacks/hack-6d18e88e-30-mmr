@@ -19,3 +19,6 @@ a { color: inherit; }
 .demo-shell button:hover { background: #24504a; }
 .demo-shell button:focus-visible { outline: 2px solid #a2e7d0; outline-offset: 4px; }
 .demo-shell main { padding-top: 24px; }
+
+.sana-app-error { max-width: 620px; margin: 12vh auto; padding: 32px; }
+.sana-app-error button { padding: 12px 20px; border: 1px solid #4c7771; border-radius: 12px; color: #dffdf2; background: #193a38; }

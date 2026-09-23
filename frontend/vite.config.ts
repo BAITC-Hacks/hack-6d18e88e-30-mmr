@@ -10,5 +10,9 @@ export default defineConfig(({ mode }) => {
   if (key.startsWith('sb_secret_') || legacyRole === 'service_role') {
     throw new Error('A secret Supabase key cannot be bundled into frontend. Replace it with a publishable key and rotate the exposed secret.');
   }
-  return { plugins: [react()], server: { port: 5173, strictPort: true } };
+  return {
+    plugins: [react()],
+    server: { port: 5173, strictPort: true, proxy: { '/api': 'http://127.0.0.1:8000' } },
+    preview: { proxy: { '/api': 'http://127.0.0.1:8000' } },
+  };
 })

@@ -89,7 +89,7 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Не удалось выполнить действие. Попробуйте ещё раз.';
 }
 
-export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
+export default function AuthPage({ onDemo, onWorkspace }: { onDemo?: () => void; onWorkspace?: (account: Account) => void }) {
   const [mode, setMode] = useState<Mode>('login');
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
@@ -298,6 +298,7 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
             onResendVerification={() => void perform(async () => { const result = await authClient.resendVerification(account.email); setNotice(result.message); })}
             onLogout={() => void perform(async () => { await authClient.logout(); setAccount(null); switchMode('login'); setNotice('Вы вышли из аккаунта.'); })}
             onDemo={onDemo}
+            onWorkspace={onWorkspace ? () => void perform(async () => { const current = await authClient.me(); acceptAccount(current); onWorkspace(current); }) : undefined}
           />}
 
           {isEntry && <p className="sana-alternate">{mode === 'login' ? 'Впервые здесь?' : 'Уже знакомы?'} <button type="button" className="sana-text-button" onClick={() => switchMode(mode === 'login' ? 'register' : 'login')} disabled={busy}>{mode === 'login' ? 'Создать аккаунт' : 'Войти в аккаунт'}<span aria-hidden="true"> ↗</span></button></p>}

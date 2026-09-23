@@ -4,7 +4,7 @@ import { authProvider, clearSupabaseLocalSession, getSupabaseClient } from './su
 
 export { authProvider } from './supabaseClient';
 
-const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+const baseUrl = (import.meta.env?.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
 const mailMessage = 'Если адрес подходит для этой операции, письмо будет отправлено. Проверьте почту и папку «Спам».';
 const invalidLink = 'Ссылка недействительна или устарела. Запросите новое письмо и откройте последнюю ссылку.';
 const profileMessage = 'Не удалось загрузить профиль. Проверьте подключение и настройку таблицы profiles в Supabase.';
@@ -70,7 +70,9 @@ async function request<T>(path: string, body?: unknown, method = 'POST', scope =
     });
     const data = await response.json();
     if (!response.ok) {
-      throw new AuthError(typeof data.detail === 'string' ? data.detail : 'Проверьте заполнение полей.', response.status);
+      const message = typeof data?.detail === 'string' ? data.detail
+        : typeof data?.detail?.message === 'string' ? data.detail.message : 'Проверьте заполнение полей.';
+      throw new AuthError(message, response.status);
     }
     return data as T;
   });
