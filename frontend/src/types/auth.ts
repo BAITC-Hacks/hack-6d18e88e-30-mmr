@@ -20,6 +20,7 @@ export interface Registration {
 export interface AuthMessage {
   message: string;
   requires_email_confirmation?: boolean;
+  delivery?: 'preview' | 'queued';
 }
 
 export interface AuthBootstrap {

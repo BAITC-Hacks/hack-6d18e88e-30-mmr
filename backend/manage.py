@@ -15,10 +15,19 @@ def main():
     admin.add_argument("email")
     sub.add_parser("send-pending", help="Process up to 100 queued emails now")
     sub.add_parser("mail-status", help="Show the last 20 mail jobs, without message bodies")
+    mail_check = sub.add_parser("check-mail", help="Check SMTP/TLS/login without sending mail or changing the queue")
+    mail_check.add_argument("--send-test", action="store_true", help="Send exactly one test message to SMTP_USER")
     preview = sub.add_parser("preview-mail", help="Read a local .eml preview (file mode only)")
     preview.add_argument("id", type=int)
     args = parser.parse_args()
-    settings = load_settings()
+    try:
+        settings = load_settings()
+    except (ValueError, TypeError):
+        parser.exit(2, "Не удалось загрузить настройки. Проверьте .env: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, MAIL_FROM и параметры авторизации. Значения настроек не выводятся.\n")
+    if args.command == "check-mail":
+        from .services.mail_diagnostics import check_mail
+        result = check_mail(settings, send_test=args.send_test)
+        parser.exit(0 if result.ok else 1, "\n".join(result.messages) + "\n")
     initialize(settings)
     if args.command == "make-admin":
         if settings.auth_provider == "supabase":

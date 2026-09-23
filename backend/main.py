@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -21,6 +22,7 @@ from backend.services.mail import mail_worker
 from backend.services.security import COOKIE_NAME, current_user
 from backend.schemas.auth import UserResponse
 
+logger = logging.getLogger(__name__)
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
@@ -28,6 +30,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         initialize(settings)
+        if settings.mail_backend == "file":
+            logger.warning("MAIL_BACKEND=file: email is saved as .eml previews; nothing is sent to inboxes. Configure SMTP and request a new email.")
+        if not settings.mail_worker_enabled:
+            logger.warning("Mail worker is disabled: queued emails require backend.manage send-pending.")
         stop = asyncio.Event()
         mail_enabled = settings.mail_worker_enabled and (settings.auth_provider == "local" or bool(settings.supabase_secret_key))
         worker = asyncio.create_task(mail_worker(settings, stop)) if mail_enabled else None

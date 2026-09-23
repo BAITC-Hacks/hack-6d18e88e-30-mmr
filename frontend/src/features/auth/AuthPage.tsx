@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, InputHTMLAttributes, ReactNode } from 'react';
 import { authClient } from '../../services/authClient';
-import type { Account } from '../../types/auth';
+import type { Account, AuthMessage } from '../../types/auth';
 import './AuthPage.css';
 
 type Mode = 'login' | 'register' | 'forgot' | 'resend' | 'sent' | 'reset' | 'verified' | 'profile';
@@ -102,6 +102,7 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
   const [role, setRole] = useState<'student' | 'business'>('student');
   const [newsletter, setNewsletter] = useState(false);
   const [sentFor, setSentFor] = useState<'register' | 'forgot'>('register');
+  const [delivery, setDelivery] = useState<AuthMessage['delivery']>('queued');
   const [resent, setResent] = useState(false);
   const [resendSeconds, setResendSeconds] = useState(0);
   const [verificationSuccess, setVerificationSuccess] = useState<'email' | 'password'>('email');
@@ -160,6 +161,14 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
     setNewsletter(next.newsletter_opt_in);
   }
 
+  function showMailResult(result: AuthMessage, purpose: 'register' | 'forgot') {
+    setSentFor(purpose);
+    setDelivery(result.delivery ?? 'queued');
+    switchMode('sent');
+    setResendSeconds(60);
+    setNotice(result.message);
+  }
+
   async function perform(action: () => Promise<void>) {
     if (busy) return;
     setBusy(true);
@@ -191,23 +200,15 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
           acceptAccount(await authClient.me());
           switchMode('profile');
         } else {
-          setSentFor('register');
-          switchMode('sent');
-          setResendSeconds(60);
+          showMailResult(result, 'register');
         }
         setNotice(result.message);
       } else if (mode === 'forgot') {
         const result = await authClient.forgotPassword(email.trim());
-        setSentFor('forgot');
-        switchMode('sent');
-        setResendSeconds(60);
-        setNotice(result.message);
+        showMailResult(result, 'forgot');
       } else if (mode === 'resend') {
         const result = await authClient.resendVerification(email.trim());
-        setSentFor('register');
-        switchMode('sent');
-        setResendSeconds(60);
-        setNotice(result.message);
+        showMailResult(result, 'register');
       } else if (mode === 'reset') {
         const result = await authClient.resetPassword('', password);
         setAccount(null);
@@ -221,6 +222,7 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
   function resend() {
     void perform(async () => {
       const result = sentFor === 'forgot' ? await authClient.forgotPassword(email.trim()) : await authClient.resendVerification(email.trim());
+      setDelivery(result.delivery ?? 'queued');
       setResent(true);
       setResendSeconds(60);
       setNotice(result.message);
@@ -249,7 +251,7 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
           {(mode === 'sent' || mode === 'verified') && <div className={`sana-state-icon ${mode === 'verified' ? 'sana-state-icon--success' : ''}`}><Icon name={mode === 'sent' ? 'mail' : 'check'} /></div>}
           <div className="sana-form-heading">
             <p className="sana-form-eyebrow">{heading.eyebrow}</p>
-            <h2 ref={headingRef} tabIndex={-1}>{mode === 'verified' ? successTitle : heading.title}</h2>
+            <h2 ref={headingRef} tabIndex={-1}>{mode === 'verified' ? successTitle : mode === 'sent' && delivery === 'preview' ? 'Режим предпросмотра.' : heading.title}</h2>
             {heading.description && <p>{mode === 'verified' && verificationSuccess === 'password' ? 'Войдите с новым паролем, чтобы продолжить работу.' : mode === 'verified' && account ? 'Ваш адрес подтверждён. Можно переходить к аккаунту.' : heading.description}</p>}
           </div>
           {error && <div className="sana-message sana-message--error" role="alert"><span aria-hidden="true">!</span><p>{error}</p></div>}
@@ -268,14 +270,14 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
             {mode === 'login' && <div className="sana-forgot-row"><span><Icon name="lock" /> Ваш личный аккаунт</span><button type="button" className="sana-text-button" onClick={() => switchMode('forgot')} disabled={busy}>Забыли пароль?</button></div>}
             {mode === 'register' && <label className="sana-checkbox"><input type="checkbox" checked={newsletter} onChange={(event) => setNewsletter(event.target.checked)} disabled={busy} /><span>Хочу получать новости платформы по почте.<small>Необязательно. Отписаться можно в любой момент.</small></span></label>}
             <button type="submit" className="sana-primary" disabled={busy}>{busy ? <><span className="sana-spinner" /> Подождите…</> : <>{submitLabel}<Icon name="arrow" /></>}</button>
-            {mode === 'login' && error && email && <button type="button" className="sana-text-button sana-resend-inline" disabled={busy} onClick={() => void perform(async () => { const result = await authClient.resendVerification(email.trim()); setSentFor('register'); switchMode('sent'); setResendSeconds(60); setNotice(result.message); })}>Отправить подтверждение почты повторно</button>}
+            {mode === 'login' && error && email && <button type="button" className="sana-text-button sana-resend-inline" disabled={busy} onClick={() => void perform(async () => { const result = await authClient.resendVerification(email.trim()); showMailResult(result, 'register'); })}>Отправить подтверждение почты повторно</button>}
           </form>}
 
           {mode === 'sent' && <div className="sana-sent">
-            <p>{sentFor === 'forgot' ? 'Если аккаунт с этой почтой существует, на него придёт ссылка для смены пароля.' : 'Если для этого адреса требуется подтверждение, на него придёт письмо со ссылкой.'}</p>
+            <p>{delivery === 'preview' ? notice : sentFor === 'forgot' ? 'Если аккаунт с этой почтой существует, письмо со ссылкой для смены пароля поставлено в очередь отправки.' : 'Если для этого адреса требуется подтверждение, письмо со ссылкой поставлено в очередь отправки.'}</p>
             <div className="sana-recipient"><Icon name="mail" /><strong>{email}</strong></div>
             <div className="sana-mail-preview"><div className="sana-mail-preview-heading"><span className="sana-mail-avatar">S</span><div><strong>AI Sana</strong><span>Письмо от платформы</span></div></div><p>{sentFor === 'forgot' ? 'Восстановление доступа к AI Sana' : 'Подтвердите почту в AI Sana'}</p><span>{sentFor === 'forgot' ? 'В письме будет кнопка «Задать новый пароль».' : 'Откройте письмо и подтвердите ваш адрес.'}</span></div>
-            <p className="sana-delivery-note">Письмо может идти несколько минут. Проверьте также папку «Спам».</p>
+            <p className="sana-delivery-note">{delivery === 'preview' ? 'Отправка на почту пока отключена. Попросите владельца приложения настроить почтовый сервис, затем запросите новое письмо.' : 'Письмо может идти несколько минут. Проверьте также папку «Спам».'}</p>
             <button type="button" className="sana-secondary" onClick={resend} disabled={busy || resendSeconds > 0}>{busy ? 'Отправляем…' : resendSeconds > 0 ? `Отправить ещё раз через ${resendSeconds} с` : 'Отправить письмо ещё раз'}</button>
             <button type="button" className="sana-text-button sana-centered" disabled={busy} onClick={() => switchMode(sentFor === 'forgot' ? 'forgot' : 'resend')}>Указать другую почту</button>
           </div>}

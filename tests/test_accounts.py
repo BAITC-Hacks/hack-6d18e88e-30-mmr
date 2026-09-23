@@ -213,6 +213,39 @@ def test_file_delivery_is_preview_not_sent_and_does_not_duplicate(client):
         assert row["body"] == ""
 
 
+@pytest.mark.parametrize("transport", ["file", "smtp"])
+def test_mail_actions_describe_transport_without_disclosing_accounts(client, transport):
+    settings = replace(client.app.state.settings, mail_backend=transport, smtp_host="smtp.example.com",
+                       mail_from="sender@example.com")
+    client.app.state.settings = settings
+    data = {"email": "person@example.com", "password": PASSWORD, "full_name": "Test"}
+    created = client.post("/api/auth/register", json=data)
+    duplicate = client.post("/api/auth/register", json=data)
+    assert created.status_code == duplicate.status_code == 202
+    assert created.json() == duplicate.json()
+    assert created.json()["delivery"] == ("preview" if transport == "file" else "queued")
+    for endpoint in ("forgot-password", "resend-verification"):
+        existing = client.post(f"/api/auth/{endpoint}", json={"email": "person@example.com"})
+        unknown = client.post(f"/api/auth/{endpoint}", json={"email": "unknown@example.com"})
+        assert existing.status_code == unknown.status_code == 202
+        assert existing.json() == unknown.json() == created.json()
+    with connect(settings) as db:
+        assert {row[0] for row in db.execute("SELECT status FROM outbox")} == {"pending"}
+
+
+@pytest.mark.parametrize("overrides", [
+    {"smtp_port": 0}, {"smtp_port": 65536},
+    {"mail_from": "noreply@example.com"}, {"mail_from": "broken"},
+    {"mail_from": "sender@example.com\r\nBcc: other@example.com"},
+    {"mail_from": "one@example.com, two@example.com"},
+    {"smtp_host": "smtp.gmail.com", "smtp_user": "", "smtp_password": ""},
+])
+def test_rejects_invalid_smtp_configuration(overrides):
+    values = {"mail_backend": "smtp", "smtp_host": "smtp.example.com", "mail_from": "sender@example.com"}
+    with pytest.raises(ValueError):
+        Settings(**(values | overrides))
+
+
 def test_delivery_failure_is_persisted_and_retried_after_restart(client):
     register(client, verified=False)
     settings = client.app.state.settings

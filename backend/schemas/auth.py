@@ -57,6 +57,10 @@ class MessageResponse(BaseModel):
     message: str
 
 
+class MailResponse(MessageResponse):
+    delivery: Literal["preview", "queued"]
+
+
 class CampaignRequest(InputModel):
     subject: str = Field(min_length=1, max_length=160)
     text: str = Field(min_length=1, max_length=10000)

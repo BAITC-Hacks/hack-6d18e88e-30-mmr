@@ -3,7 +3,9 @@ import logging
 import smtplib
 import ssl
 import time
+from contextlib import contextmanager
 from email.message import EmailMessage
+from email.utils import formatdate, make_msgid
 
 from ..config import Settings
 from ..database import connect
@@ -30,24 +32,27 @@ def enqueue_link(db, settings: Settings, user, purpose: str):
         "Получили запрос на смену пароля вашего аккаунта. Нажмите кнопку ниже, чтобы задать новый пароль."
         if purpose == "reset" else "Остался один шаг: подтвердите почту, чтобы начать работу с бизнес-задачами и командами.",
         link, "Задать новый пароль" if purpose == "reset" else "Подтвердить почту", lifetime // 60,
-    )
+    ) if settings.auth_mail_format == "html" else ""
     enqueue(db, user, subject, body, html_body=html_body)
 
 
-def deliver(settings: Settings, row):
+def build_message(settings: Settings, row):
     row = dict(row)
     message = EmailMessage()
     message["From"] = settings.mail_from
     message["To"] = row["recipient"]
     message["Subject"] = row["subject"]
-    message["Message-ID"] = f"<ai-sana-{row['id']}@{settings.smtp_host or 'localhost'}>"
+    message["Date"] = formatdate(localtime=False, usegmt=True)
+    message["Message-ID"] = make_msgid(idstring="ai-sana")
     message.set_content(row["body"])
     if row.get("html_body"):
         message.add_alternative(row["html_body"], subtype="html")
-    if settings.mail_backend == "file":
-        settings.mail_directory.mkdir(parents=True, exist_ok=True)
-        (settings.mail_directory / f"{row['id']:08d}.eml").write_bytes(message.as_bytes())
-        return "preview"
+    return message
+
+
+@contextmanager
+def smtp_connection(settings: Settings):
+    """Use the same verified TLS and authentication path for delivery and diagnostics."""
     context = ssl.create_default_context()
     if settings.smtp_port == 465:
         server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15, context=context)
@@ -56,8 +61,19 @@ def deliver(settings: Settings, row):
     with server:
         if settings.smtp_port != 465:
             server.starttls(context=context)
+            server.ehlo()
         if settings.smtp_user:
             server.login(settings.smtp_user, settings.smtp_password)
+        yield server
+
+
+def deliver(settings: Settings, row):
+    message = build_message(settings, row)
+    if settings.mail_backend == "file":
+        settings.mail_directory.mkdir(parents=True, exist_ok=True)
+        (settings.mail_directory / f"{row['id']:08d}.eml").write_bytes(message.as_bytes())
+        return "preview"
+    with smtp_connection(settings) as server:
         server.send_message(message)
     return "sent"
 
