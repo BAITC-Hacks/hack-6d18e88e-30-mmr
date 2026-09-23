@@ -1,0 +1,24 @@
+{
+  "title": "AI Sana — TaskRank & TeamMatch",
+  "pathname": "/design",
+  "viewport": {
+    "width": 390,
+    "height": 1400
+  },
+  "documentWidth": 375,
+  "documentHeight": 2545,
+  "horizontalOverflow": false,
+  "headings": [
+    "Характеримеет значение.",
+    "SignalЭнергия совместной работы",
+    "Большие идеи.Общее дело.",
+    "Не толькокрасивая обложка.",
+    "Вдохновение,переведённое в продукт."
+  ],
+  "overflowing": [],
+  "brokenImages": 0,
+  "pageErrors": [],
+  "blockedRequests": {
+    "GET http://gc.kis.v2.scr.kaspersky-labs.com": 1
+  }
+}

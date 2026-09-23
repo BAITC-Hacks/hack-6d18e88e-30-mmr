@@ -1,0 +1,136 @@
+{
+  "title": "AI Sana — TaskRank & TeamMatch",
+  "pathname": "/",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "documentWidth": 375,
+  "documentHeight": 3254,
+  "horizontalOverflow": false,
+  "headings": [
+    "От задачи к результату.",
+    "Есть задача.Будет решение.",
+    "Ваши задачи",
+    "Сбросить демо-данные?"
+  ],
+  "overflowing": [
+    {
+      "tag": "button",
+      "className": "nav-item ",
+      "left": 390,
+      "right": 523,
+      "width": 133
+    },
+    {
+      "tag": "svg",
+      "className": "[object SVGAnimatedString]",
+      "left": 402,
+      "right": 421,
+      "width": 19
+    },
+    {
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "left": 404,
+      "right": 418,
+      "width": 14
+    },
+    {
+      "tag": "span",
+      "className": "",
+      "left": 432,
+      "right": 479,
+      "width": 47
+    },
+    {
+      "tag": "span",
+      "className": "nav-count",
+      "left": 490,
+      "right": 511,
+      "width": 21
+    },
+    {
+      "tag": "button",
+      "className": "nav-item ",
+      "left": 278,
+      "right": 398,
+      "width": 120
+    },
+    {
+      "tag": "button",
+      "className": "nav-item",
+      "left": 404,
+      "right": 542,
+      "width": 138
+    },
+    {
+      "tag": "svg",
+      "className": "[object SVGAnimatedString]",
+      "left": 416,
+      "right": 435,
+      "width": 19
+    },
+    {
+      "tag": "path",
+      "className": "[object SVGAnimatedString]",
+      "left": 422,
+      "right": 432,
+      "width": 10
+    },
+    {
+      "tag": "span",
+      "className": "",
+      "left": 446,
+      "right": 512,
+      "width": 66
+    },
+    {
+      "tag": "span",
+      "className": "toggle-dot on",
+      "left": 523,
+      "right": 530,
+      "width": 7
+    },
+    {
+      "tag": "button",
+      "className": "demo-step ",
+      "left": 342,
+      "right": 400,
+      "width": 58
+    },
+    {
+      "tag": "button",
+      "className": "demo-step ",
+      "left": 406,
+      "right": 464,
+      "width": 58
+    },
+    {
+      "tag": "span",
+      "className": "",
+      "left": 423,
+      "right": 448,
+      "width": 25
+    },
+    {
+      "tag": "button",
+      "className": "demo-step ",
+      "left": 470,
+      "right": 528,
+      "width": 58
+    },
+    {
+      "tag": "span",
+      "className": "",
+      "left": 487,
+      "right": 512,
+      "width": 25
+    }
+  ],
+  "brokenImages": 0,
+  "pageErrors": [],
+  "blockedRequests": {
+    "GET http://gc.kis.v2.scr.kaspersky-labs.com": 1
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "title": "AI Sana — TaskRank & TeamMatch",
+  "pathname": "/auth",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "documentWidth": 375,
+  "documentHeight": 959,
+  "horizontalOverflow": false,
+  "headings": [
+    "Реальные задачи.Новые возможности.",
+    "Продолжим?"
+  ],
+  "overflowing": [],
+  "brokenImages": 0,
+  "pageErrors": [],
+  "blockedRequests": {
+    "GET http://gc.kis.v2.scr.kaspersky-labs.com": 1
+  }
+}

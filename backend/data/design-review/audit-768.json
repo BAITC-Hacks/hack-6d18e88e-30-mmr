@@ -1,0 +1,64 @@
+{
+  "title": "AI Sana — TaskRank & TeamMatch",
+  "pathname": "/auth",
+  "viewport": {
+    "width": 768,
+    "height": 1000
+  },
+  "documentWidth": 768,
+  "documentHeight": 1000,
+  "horizontalOverflow": false,
+  "headings": [
+    "Реальные задачи.Новые возможности.",
+    "Вход временно недоступен."
+  ],
+  "overflowing": [],
+  "brokenImages": 0,
+  "pageErrors": [],
+  "apiResponses": [
+    {
+      "path": "/api/ai/analyze",
+      "status": 200
+    },
+    {
+      "path": "/api/ai/inspector",
+      "status": 200
+    }
+  ],
+  "blockedRequests": {
+    "GET http://gc.kis.v2.scr.kaspersky-labs.com": 3
+  },
+  "scenarioReport": {
+    "checks": [
+      "real HTTP analysis returned at least three clarification questions",
+      "ten editable fields, consent, 0→100 confirmed rating, explicit publication",
+      "proposal, manual selection, milestone award and persistence across real reload",
+      "published task opens in editor from My Tasks",
+      "Inspector loads the actual server prompt API",
+      "native modal Escape closes and restores page scrolling",
+      "all three design previews and applied themes preserve task data",
+      "two real browser tabs preserve newer work and display the storage conflict",
+      "student pages and account render without layout overflow"
+    ],
+    "screenshots": [
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-overview.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-questions.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-editor.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-proposal.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-milestones.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-my-tasks.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-published-editor.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-inspector.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-task-details.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-my-proposals.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-team.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-design-atelier.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-theme-atelier.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-design-index.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-theme-index.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-design-signal.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-theme-signal.png",
+      "C:\\Users\\Тамерлан\\hack-6d18e88e-30-mmr\\backend\\data\\design-review\\audit-768-auth.png"
+    ]
+  }
+}

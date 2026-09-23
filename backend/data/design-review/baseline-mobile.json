@@ -1,0 +1,45 @@
+{
+  "title": "AI Sana — TaskRank & TeamMatch",
+  "pathname": "/",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "documentWidth": 375,
+  "documentHeight": 2715,
+  "horizontalOverflow": false,
+  "headings": [
+    "От задачи к результату.",
+    "Ваша экспертиза.Их свежий взгляд.",
+    "Ваши задачи",
+    "Сбросить демо-данные?"
+  ],
+  "overflowing": [
+    {
+      "tag": "button",
+      "className": "nav-item ",
+      "left": 352,
+      "right": 475,
+      "width": 123
+    },
+    {
+      "tag": "span",
+      "className": "",
+      "left": 392,
+      "right": 434,
+      "width": 42
+    },
+    {
+      "tag": "span",
+      "className": "nav-count",
+      "left": 445,
+      "right": 465,
+      "width": 20
+    }
+  ],
+  "brokenImages": 0,
+  "pageErrors": [],
+  "blockedRequests": {
+    "GET http://gc.kis.v2.scr.kaspersky-labs.com": 2
+  }
+}
