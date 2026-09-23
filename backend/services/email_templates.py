@@ -1,19 +1,63 @@
-"""HTML counterpart for local development / self-hosted auth emails."""
+"""Email-safe HTML for local and self-hosted account messages."""
 from html import escape
 
 
 def action_email(title: str, description: str, link: str, button: str, minutes: int) -> str:
     title, description, link, button = map(escape, (title, description, link, button))
-    return f'''<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;background:#f5f4ed;font-family:Arial,sans-serif;color:#173b30">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f4ed"><tr><td align="center" style="padding:40px 16px">
-<table role="presentation" width="560" cellspacing="0" cellpadding="0" style="width:100%;max-width:560px;background:#fff;border:1px solid #dfe6dc;border-radius:20px">
-<tr><td style="padding:36px 36px 20px;font-size:14px;font-weight:bold;letter-spacing:3px">AI SANA <span style="color:#819185;font-weight:normal;letter-spacing:0">/ TaskRank</span></td></tr>
-<tr><td style="padding:0 36px"><h1 style="font-size:28px;line-height:1.25;margin:12px 0 20px">{title}</h1>
-<p style="font-size:16px;line-height:1.7;color:#52675b">{description}</p></td></tr>
-<tr><td style="padding:24px 36px"><a href="{link}" style="display:inline-block;padding:16px 24px;background:#1f5c43;color:#fff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:bold">{button} &#8594;</a></td></tr>
-<tr><td style="padding:0 36px 32px;color:#65776a;font-size:13px;line-height:1.7">
-Ссылка действует {minutes} минут и только один раз. Если вы не запрашивали это письмо, просто проигнорируйте его.<br><br>
-Если кнопка не открывается, скопируйте ссылку:<br><a href="{link}" style="color:#1f5c43;word-break:break-all">{link}</a></td></tr>
-</table><p style="color:#7e8b7e;font-size:12px;margin:24px 0">AI Sana · Здесь задачи становятся возможностями.</p>
-</td></tr></table></body></html>'''
+    return f'''<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>{title}</title>
+</head>
+<body style="margin:0;padding:0;width:100%;background-color:#e9f0ee;font-family:Arial,Helvetica,sans-serif;color:#132f2c;-webkit-text-size-adjust:100%;">
+  <div style="display:none;font-size:1px;line-height:1px;color:#e9f0ee;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">{description}</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#e9f0ee" style="background-color:#e9f0ee;">
+    <tr><td align="center" style="padding:32px 12px 28px;">
+      <!--[if mso]><table role="presentation" width="580" cellspacing="0" cellpadding="0" border="0"><tr><td><![endif]-->
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:580px;">
+        <tr><td bgcolor="#0d302e" style="padding:30px 24px 32px;background-color:#0d302e;background-image:linear-gradient(125deg,#0b2527 5%,#124943 70%,#216859 100%);border:1px solid #27554e;border-radius:24px 24px 0 0;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+              <td width="44" valign="middle"><table role="presentation" width="40" cellspacing="0" cellpadding="0" border="0"><tr><td align="center" height="40" bgcolor="#c4f9df" style="height:40px;background-color:#c4f9df;border:1px solid #e2fff1;border-radius:12px;font-size:24px;line-height:40px;color:#0e3e35;">&#10022;</td></tr></table></td>
+              <td style="padding-left:12px;color:#f1fff9;font-size:19px;line-height:23px;font-weight:700;letter-spacing:2.8px;">AI SANA<br><span style="font-size:9px;line-height:17px;font-weight:400;letter-spacing:2.1px;color:#b8d8cf;">TASKRANK &amp; TEAMMATCH</span></td>
+            </tr>
+            <tr><td colspan="2" style="padding-top:30px;font-size:11px;line-height:18px;letter-spacing:2px;font-weight:700;color:#b5efd7;">ИДЕИ ВСТРЕЧАЮТ ВОЗМОЖНОСТИ</td></tr>
+            <tr><td colspan="2" style="padding-top:9px;font-size:15px;line-height:23px;color:#d0e6df;">Ваш следующий шаг начинается здесь.</td></tr>
+          </table>
+        </td></tr>
+        <tr><td bgcolor="#ffffff" style="padding:32px 24px 28px;background-color:#ffffff;border:1px solid #d9e5df;border-top:0;border-radius:0 0 24px 24px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <tr><td style="padding-bottom:18px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr><td bgcolor="#eef8f2" style="padding:7px 11px;background-color:#eef8f2;border:1px solid #d4e9dc;border-radius:7px;font-size:10px;line-height:14px;letter-spacing:1.1px;font-weight:700;color:#23624d;">ВАШ АККАУНТ AI SANA</td></tr></table>
+            </td></tr>
+            <tr><td><h1 style="margin:0 0 17px;font-size:30px;line-height:36px;letter-spacing:-1px;font-weight:700;color:#132f2c;">{title}</h1></td></tr>
+            <tr><td style="font-size:15px;line-height:25px;color:#526961;">{description}</td></tr>
+            <tr><td style="padding:26px 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td align="center" bgcolor="#163f35" style="background-color:#163f35;background-image:linear-gradient(105deg,#163f35,#23604c);border:1px solid #163f35;border-radius:12px;mso-padding-alt:16px 12px;">
+                <a href="{link}" style="display:block;padding:16px 12px;font-size:15px;line-height:22px;font-weight:700;letter-spacing:0.1px;text-align:center;color:#ffffff;text-decoration:none;border-radius:12px;">{button} &nbsp;&#8599;</a>
+              </td></tr></table>
+            </td></tr>
+            <tr><td bgcolor="#f0f7f3" style="padding:17px 16px;background-color:#f0f7f3;border:1px solid #dceae1;border-radius:12px;">
+              <p style="margin:0 0 5px;font-size:12px;line-height:18px;font-weight:700;color:#214a3e;">ОДНОРАЗОВАЯ ССЫЛКА</p>
+              <p style="margin:0;font-size:13px;line-height:21px;color:#526961;">Ссылка действует {minutes} минут и только один раз. Если время истекло, запросите новое письмо на странице входа.</p>
+            </td></tr>
+            <tr><td style="padding-top:23px;font-size:12px;line-height:20px;color:#64786f;">Если вы не запрашивали это письмо, просто проигнорируйте его. Не пересылайте ссылку другим людям.</td></tr>
+            <tr><td style="padding-top:23px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="table-layout:fixed;"><tr><td style="border-top:1px solid #e5ece7;padding-top:19px;font-size:11px;line-height:18px;color:#64786f;">
+                Кнопка не открывается? Скопируйте ссылку в браузер:<br>
+                <a href="{link}" style="color:#25634f;text-decoration:underline;word-break:break-all;overflow-wrap:anywhere;">{link}</a>
+              </td></tr></table>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td align="center" style="padding:24px 12px 0;font-size:11px;line-height:19px;color:#5f746b;">AI Sana &middot; От задачи к результату.<br><span style="font-size:10px;color:#6c7d75;">Бизнес-задачи. Сильные команды. Общий результат.</span></td></tr>
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td></tr>
+  </table>
+</body>
+</html>'''

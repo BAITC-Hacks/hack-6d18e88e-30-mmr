@@ -11,7 +11,7 @@ if not __package__:
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from backend.api.ai_routes import router as ai_router
 from backend.api.auth_routes import router as auth_router
@@ -97,7 +97,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/email-preview/{template}", include_in_schema=False)
     def email_preview(template: Literal["confirmation", "recovery"]):
-        # Static samples contain only intentionally invalid demo links, no tokens or addresses.
+        # Render the same local template as SMTP; samples never contain real tokens.
+        if settings.auth_provider == "local":
+            from backend.services.email_templates import action_email
+            recovery = template == "recovery"
+            html = action_email(
+                "Вернём вас к вашим проектам" if recovery else "Добро пожаловать в AI Sana",
+                "Получили запрос на смену пароля вашего аккаунта. Нажмите кнопку ниже, чтобы задать новый пароль."
+                if recovery else "Остался один шаг: подтвердите почту, чтобы начать работу с бизнес-задачами и командами.",
+                f"https://example.invalid/#{'reset' if recovery else 'verify'}=DEMO-NOT-A-REAL-TOKEN",
+                "Задать новый пароль" if recovery else "Подтвердить почту",
+                30 if recovery else 1440,
+            )
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+        # Supabase samples preserve its separate URL format.
         path = Path(__file__).resolve().parents[1] / "supabase/email-templates/preview" / f"{template}.html"
         return FileResponse(path, media_type="text/html")
 

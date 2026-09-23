@@ -263,6 +263,33 @@ def test_delivery_failure_is_persisted_and_retried_after_restart(client):
         assert db.execute("SELECT status FROM outbox").fetchone()[0] == "preview"
 
 
+@pytest.mark.parametrize("mail_format", ["text", "html"])
+@pytest.mark.parametrize("purpose", ["verify", "reset"])
+def test_auth_email_formats_preserve_single_use_links(client, mail_format, purpose):
+    settings = replace(client.app.state.settings, auth_mail_format=mail_format)
+    client.app.state.settings = settings
+    register(client, verified=False)
+    if purpose == "reset":
+        assert client.post("/api/auth/forgot-password", json={"email": "person@example.com"}).status_code == 202
+    token = latest_token(client, purpose)
+    with connect(settings) as db:
+        job_id = db.execute("SELECT MAX(id) FROM outbox").fetchone()[0]
+    process_outbox(settings)
+    message = BytesParser(policy=policy.default).parsebytes((settings.mail_directory / f"{job_id:08d}.eml").read_bytes())
+    assert f"#{purpose}={token}" in message.get_body(preferencelist=("plain",)).get_content()
+    html = message.get_body(preferencelist=("html",))
+    if mail_format == "html":
+        assert html is not None and f"#{purpose}={token}" in html.get_content()
+    else:
+        assert html is None and message.get_content_type() == "text/plain"
+    route = "verify-email" if purpose == "verify" else "reset-password"
+    payload = {"token": token}
+    if purpose == "reset":
+        payload["new_password"] = "Another strong password 456!"
+    assert client.post(f"/api/auth/{route}", json=payload).status_code == 200
+    assert client.post(f"/api/auth/{route}", json=payload).status_code == 400
+
+
 @pytest.mark.parametrize("port", [465, 587])
 def test_smtp_tls_and_credentials(client, port):
     settings = replace(client.app.state.settings, mail_backend="smtp", smtp_host="smtp.example.com", smtp_port=port,

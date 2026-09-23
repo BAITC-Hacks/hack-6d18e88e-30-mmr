@@ -1,7 +1,7 @@
 ﻿:root {
-  font-family: 'Segoe UI', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #183d30;
-  background: #f8f7f2;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #e9f4f1;
+  background: #07171c;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -14,6 +14,8 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 button:disabled { cursor: wait; }
 a { color: inherit; }
-.demo-shell { max-width: 1000px; margin: 0 auto; padding: 48px 24px; }
-.demo-shell button { margin: 8px 8px 8px 0; padding: 10px 18px; border: 1px solid #b9c8bc; border-radius: 10px; color: #183d30; background: white; }
+.demo-shell { max-width: 1000px; margin: 0 auto; padding: 48px 24px; color: #e9f4f1; }
+.demo-shell button { margin: 8px 8px 8px 0; padding: 10px 18px; border: 1px solid #4c7771; border-radius: 14px; color: #dffdf2; background: #193a38; }
+.demo-shell button:hover { background: #24504a; }
+.demo-shell button:focus-visible { outline: 2px solid #a2e7d0; outline-offset: 4px; }
 .demo-shell main { padding-top: 24px; }

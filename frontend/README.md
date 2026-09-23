@@ -1,32 +1,46 @@
-# React + TypeScript + Vite
+﻿# AI Sana — интерфейс аккаунта
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript + Vite. Вход, регистрация, подтверждение почты, восстановление пароля и профиль используют общий клиент `src/services/authClient.ts`.
 
-Currently, two official plugins are available:
+## Запуск
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```powershell
+cd frontend
+npm ci
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Открыть http://localhost:5173. Backend запускается отдельно по [инструкции](../backend/README.md).
+Без Supabase-переменных в `frontend/.env.local` локальный dev-сервер использует FastAPI и cookie-сессию.
+Настройка Supabase: [docs/SUPABASE_SETUP.md](../docs/SUPABASE_SETUP.md).
+
+## Интерфейс
+
+- `src/features/auth/AuthPage.tsx` и `AuthPage.css`: вход и остальные состояния авторизации.
+- `src/features/auth/ProfilePanel.tsx` и `ProfilePanel.css`: профиль, статус почты, настройки писем, смена пароля и выход.
+- `src/services/authClient.ts`: запросы авторизации и обработка одноразовых ссылок.
+- `src/types/auth.ts`: общий контракт аккаунта.
+
+Оформление Aurora Glass использует прозрачные поверхности, `backdrop-filter`, светящиеся границы и плавные CSS-переходы.
+Для браузеров без blur предусмотрен непрозрачный фон. Системные настройки уменьшения движения и прозрачности учитываются в CSS.
+Внешние шрифты, изображения и библиотеки анимации для этого оформления не нужны.
+Профиль показывает данные текущего аккаунта; демонстрационный переключатель ролей остаётся отдельным сценарием.
+
+## Проверка
+
+```powershell
+npm run build
+npm test
+npm run lint
+```
+
+При ручной проверке пройдите вход, регистрацию, запрос восстановления, одноразовую ссылку, сохранение подписки и выход.
+Проверьте клавиатурную навигацию, длинное имя/email и ширины 320, 390 и 1440 px.
+
+Письма можно посмотреть без отправки:
+
+- http://localhost:8000/email-preview/confirmation
+- http://localhost:8000/email-preview/recovery
+
+В локальном режиме предпросмотр использует тот же HTML-шаблон, что и SMTP. Ссылки в нём демонстрационные.
+`AUTH_MAIL_FORMAT=html` в корневом `.env` включает HTML и текстовую альтернативу. После изменения настройки нужен перезапуск backend.

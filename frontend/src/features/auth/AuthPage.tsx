@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, InputHTMLAttributes, ReactNode } from 'react';
 import { authClient } from '../../services/authClient';
 import type { Account, AuthMessage } from '../../types/auth';
+import ProfilePanel from './ProfilePanel';
 import './AuthPage.css';
 
 type Mode = 'login' | 'register' | 'forgot' | 'resend' | 'sent' | 'reset' | 'verified' | 'profile';
@@ -50,22 +51,23 @@ function StoryPanel() {
   return <aside className="sana-story" aria-label="О платформе AI Sana">
     <Brand />
     <div className="sana-story-main">
-      <p className="sana-eyebrow"><span /> МЕСТО ВСТРЕЧИ ИДЕЙ И КОМАНД</p>
-      <h1>Реальные задачи.<br />Новые <em>возможности.</em></h1>
-      <p className="sana-story-copy">Бизнес делится вызовами.<br />Студенты превращают знания в решения.<br />Здесь начинается ваша совместная работа.</p>
+      <p className="sana-eyebrow"><span /> ИДЕИ ВСТРЕЧАЮТ КОМАНДЫ</p>
+      <h1>Большие идеи.<br />Настоящие<br /><em>возможности.</em></h1>
+      <p className="sana-story-copy">Бизнес ставит задачи. Студенты создают решения.<br />Ваш следующий проект начинается здесь.</p>
       <div className="sana-journey" aria-hidden="true">
         <div className="sana-journey-grid" />
-        <svg className="sana-journey-path" viewBox="0 0 480 290" fill="none"><path d="M38 160C78 160 88 76 173 76S241 236 327 236s80-88 121-88" stroke="currentColor" strokeWidth="1.3" strokeDasharray="4 7" /><circle cx="38" cy="160" r="4" fill="currentColor" /><circle cx="448" cy="148" r="4" fill="currentColor" /></svg>
+        <div className="sana-glass-orb"><span /><span /><span /></div>
+        <svg className="sana-journey-path" viewBox="0 0 480 290" fill="none"><path d="M34 185C99 250 168 8 279 77S350 264 441 151" stroke="currentColor" strokeWidth="1" strokeDasharray="3 7" /><circle cx="34" cy="185" r="4" fill="currentColor" /><circle cx="441" cy="151" r="4" fill="currentColor" /></svg>
         <div className="sana-orbit sana-orbit--one" /><div className="sana-orbit sana-orbit--two" />
         <div className="sana-idea-card">
-          <span className="sana-card-overline">НАЧИНАЕТСЯ С ИДЕИ</span>
+          <span className="sana-card-overline">ОТ ИДЕИ</span>
           <span className="sana-card-icon"><Icon name="business" /></span>
           <strong>Задача бизнеса</strong>
-          <span>Ясная цель. Понятный результат.</span>
+          <span>Ваша идея обретает форму.</span>
           <div className="sana-card-line"><i /><i /><i /></div>
         </div>
-        <div className="sana-team-card"><span className="sana-team-symbol"><Icon name="team" /></span><div><strong>Ваша команда</strong><span>Ваш следующий шаг</span></div><span className="sana-team-arrow">↗</span></div>
-        <div className="sana-spark">✳</div>
+        <div className="sana-team-card"><span className="sana-team-symbol"><Icon name="team" /></span><div><span>К СОВМЕСТНОМУ РЕЗУЛЬТАТУ</span><strong>Вместе — больше.</strong></div><span className="sana-team-arrow">↗</span></div>
+        <div className="sana-spark">✦</div>
       </div>
     </div>
     <div className="sana-story-footer"><span><b>01</b> Идея</span><i /><span><b>02</b> Задача</span><i /><span><b>03</b> Команда</span></div>
@@ -73,7 +75,7 @@ function StoryPanel() {
 }
 
 const headings: Record<Mode, { eyebrow: string; title: string; description: string }> = {
-  login: { eyebrow: 'РАДЫ ВИДЕТЬ ВАС СНОВА', title: 'Продолжим?', description: 'Войдите в аккаунт — ваши идеи ждут продолжения.' },
+  login: { eyebrow: 'ВАШЕ ПРОСТРАНСТВО ВОЗМОЖНОСТЕЙ', title: 'С возвращением.', description: 'Войдите, чтобы продолжить свой путь от идеи к результату.' },
   register: { eyebrow: 'ВАШ ПЕРВЫЙ ШАГ', title: 'Начнём знакомство.', description: 'Создайте аккаунт и найдите свою роль в проекте.' },
   forgot: { eyebrow: 'ДОСТУП К АККАУНТУ', title: 'Забыли пароль?', description: 'Так бывает. Укажите почту аккаунта — мы отправим ссылку для восстановления.' },
   resend: { eyebrow: 'ПОДТВЕРЖДЕНИЕ ПОЧТЫ', title: 'Новое письмо.', description: 'Укажите почту аккаунта, чтобы запросить новую ссылку подтверждения.' },
@@ -132,7 +134,8 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
 
   useEffect(() => {
     if (previousMode.current !== mode) {
-      headingRef.current?.focus();
+      if (mode === 'profile') document.getElementById('sana-main')?.focus();
+      else headingRef.current?.focus();
       previousMode.current = mode;
     }
   }, [mode]);
@@ -235,25 +238,26 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
   const successTitle = verificationSuccess === 'password' ? 'Пароль обновлён.' : heading.title;
   const submitLabel = mode === 'login' ? 'Войти в аккаунт' : mode === 'register' ? 'Создать аккаунт' : mode === 'forgot' || mode === 'resend' ? 'Отправить ссылку' : 'Сохранить пароль';
 
-  return <div className="sana-auth">
-    <a className="sana-skip" href="#sana-main">Перейти к форме</a>
-    <StoryPanel />
+  return <div className={`sana-auth ${mode === 'profile' ? 'sana-auth--profile' : ''}`} data-mode={mode}>
+    <div className="sana-ambient" aria-hidden="true"><i /><i /><i /><div className="sana-ambient-grid" /></div>
+    <a className="sana-skip" href="#sana-main">Перейти к {mode === 'profile' ? 'профилю' : 'форме'}</a>
+    {mode !== 'profile' && <StoryPanel />}
     <div className="sana-right">
       <header className="sana-topbar">
         <div className="sana-mobile-brand"><Brand compact /></div>
-        <span className="sana-topbar-label">ПРАКТИКА СО СМЫСЛОМ</span>
+        <span className="sana-topbar-label"><span /> ПРАКТИКА СО СМЫСЛОМ</span>
         {onDemo && <button type="button" className="sana-text-button sana-demo-button" onClick={onDemo} disabled={busy}>Открыть демо <span aria-hidden="true">↗</span></button>}
       </header>
-      <main className={`sana-main ${mode === 'register' ? 'sana-main--register' : ''}`} id="sana-main">
+      <main className={`sana-main ${mode === 'register' ? 'sana-main--register' : ''}`} id="sana-main" tabIndex={-1}>
         {loading ? <div className="sana-loading" role="status"><span className="sana-spinner" /><p>Готовим ваш аккаунт…</p></div> : <div className="sana-form-container" aria-busy={busy}>
           {isEntry && <nav className="sana-tabs" aria-label="Вход или регистрация"><button type="button" aria-pressed={mode === 'login'} onClick={() => switchMode('login')} disabled={busy}>Вход</button><button type="button" aria-pressed={mode === 'register'} onClick={() => switchMode('register')} disabled={busy}>Регистрация</button></nav>}
           {(mode === 'forgot' || mode === 'resend' || mode === 'reset' || mode === 'sent') && <button type="button" className="sana-back" onClick={() => switchMode('login')} disabled={busy}><Icon name="back" /> Вернуться ко входу</button>}
           {(mode === 'sent' || mode === 'verified') && <div className={`sana-state-icon ${mode === 'verified' ? 'sana-state-icon--success' : ''}`}><Icon name={mode === 'sent' ? 'mail' : 'check'} /></div>}
-          <div className="sana-form-heading">
+          {mode !== 'profile' && <div className="sana-form-heading">
             <p className="sana-form-eyebrow">{heading.eyebrow}</p>
             <h2 ref={headingRef} tabIndex={-1}>{mode === 'verified' ? successTitle : mode === 'sent' && delivery === 'preview' ? 'Режим предпросмотра.' : heading.title}</h2>
             {heading.description && <p>{mode === 'verified' && verificationSuccess === 'password' ? 'Войдите с новым паролем, чтобы продолжить работу.' : mode === 'verified' && account ? 'Ваш адрес подтверждён. Можно переходить к аккаунту.' : heading.description}</p>}
-          </div>
+          </div>}
           {error && <div className="sana-message sana-message--error" role="alert"><span aria-hidden="true">!</span><p>{error}</p></div>}
           {failedCallback && <button type="button" className="sana-secondary sana-recovery-retry" onClick={() => switchMode(failedCallback === 'recovery' ? 'forgot' : 'resend')} disabled={busy}>Запросить новую ссылку</button>}
           {notice && (mode !== 'sent' || resent) && <div className="sana-message sana-message--success" role="status"><Icon name="check" /><p>{notice}</p></div>}
@@ -284,14 +288,17 @@ export default function AuthPage({ onDemo }: { onDemo?: () => void }) {
 
           {mode === 'verified' && <button type="button" className="sana-primary" onClick={() => switchMode(account ? 'profile' : 'login')}>{account ? 'Перейти в аккаунт' : 'Перейти ко входу'}<Icon name="arrow" /></button>}
 
-          {mode === 'profile' && account && <div className="sana-profile">
-            <div className="sana-profile-card"><div className="sana-avatar">{account.full_name.trim().slice(0, 1).toUpperCase() || 'S'}</div><div><strong>{account.full_name}</strong><span>{account.email}</span><small>{account.role === 'student' ? 'Студент' : account.role === 'business' ? 'Представитель бизнеса' : 'Администратор'}</small></div></div>
-            <div className="sana-verified-status"><Icon name={account.email_verified ? 'check' : 'mail'} /><span>{account.email_verified ? 'Электронная почта подтверждена' : 'Почта ожидает подтверждения'}</span></div>
-            {!account.email_verified && <button type="button" className="sana-text-button" disabled={busy} onClick={() => void perform(async () => { const result = await authClient.resendVerification(account.email); setNotice(result.message); })}>Отправить письмо подтверждения</button>}
-            <div className="sana-preferences"><h3>Письма от AI Sana</h3><label className="sana-checkbox"><input type="checkbox" checked={newsletter} onChange={(event) => setNewsletter(event.target.checked)} disabled={busy} /><span>Новости и обновления платформы<small>Только с вашего согласия. Письма для восстановления доступа приходят независимо от подписки.</small></span></label><button className="sana-secondary" type="button" disabled={busy || newsletter === account.newsletter_opt_in} onClick={() => void perform(async () => { acceptAccount(await authClient.preferences(newsletter)); setNotice('Настройки писем сохранены.'); })}>{busy ? 'Сохраняем…' : 'Сохранить настройки'}</button></div>
-            <button className="sana-profile-reset sana-text-button" type="button" disabled={busy} onClick={() => { setEmail(account.email); switchMode('forgot'); }}><Icon name="lock" /> Изменить пароль через почту <Icon name="arrow" /></button>
-            <button className="sana-logout" type="button" disabled={busy} onClick={() => void perform(async () => { await authClient.logout(); setAccount(null); switchMode('login'); setNotice('Вы вышли из аккаунта.'); })}><Icon name="logout" /> Выйти из аккаунта</button>
-          </div>}
+          {mode === 'profile' && account && <ProfilePanel
+            account={account}
+            newsletter={newsletter}
+            busy={busy}
+            onNewsletterChange={setNewsletter}
+            onSavePreferences={() => void perform(async () => { acceptAccount(await authClient.preferences(newsletter)); setNotice('Настройки писем сохранены.'); })}
+            onResetPassword={() => { setEmail(account.email); switchMode('forgot'); }}
+            onResendVerification={() => void perform(async () => { const result = await authClient.resendVerification(account.email); setNotice(result.message); })}
+            onLogout={() => void perform(async () => { await authClient.logout(); setAccount(null); switchMode('login'); setNotice('Вы вышли из аккаунта.'); })}
+            onDemo={onDemo}
+          />}
 
           {isEntry && <p className="sana-alternate">{mode === 'login' ? 'Впервые здесь?' : 'Уже знакомы?'} <button type="button" className="sana-text-button" onClick={() => switchMode(mode === 'login' ? 'register' : 'login')} disabled={busy}>{mode === 'login' ? 'Создать аккаунт' : 'Войти в аккаунт'}<span aria-hidden="true"> ↗</span></button></p>}
         </div>}

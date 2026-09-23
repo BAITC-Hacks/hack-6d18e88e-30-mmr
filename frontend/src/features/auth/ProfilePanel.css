@@ -1,0 +1,168 @@
+.sana-account {
+  --account-ink: #edf8f5;
+  --account-muted: #a9beb9;
+  --account-mint: #a7f1d6;
+  width: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
+  color: var(--account-ink);
+  font-family: inherit;
+  text-align: left;
+  animation: sana-account-appear 600ms ease-out both;
+}
+
+.sana-account *, .sana-account *::before, .sana-account *::after { box-sizing: border-box; }
+.sana-account :is(h1, h2, p, dl, dd) { margin: 0; }
+.sana-account button { font: inherit; }
+.sana-account svg { flex: 0 0 auto; }
+.sana-account button:focus-visible, .sana-account input:focus-visible + .sana-account-switch-track { outline: 3px solid #b9f7e6; outline-offset: 5px; }
+.sana-account button { -webkit-tap-highlight-color: transparent; }
+
+.sana-account-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: clamp(24px, 3.8vw, 48px);
+  padding: 45px 42px 47px;
+  min-height: 254px;
+  margin-bottom: 22px;
+  overflow: hidden;
+  border: 1px solid rgb(187 235 220 / 17%);
+  border-radius: 30px;
+  background: radial-gradient(ellipse at 90% 0%, rgb(103 184 163 / 15%), transparent 58%), linear-gradient(135deg, rgb(255 255 255 / 7%), rgb(12 35 33 / 72%));
+  box-shadow: inset 0 1px 0 rgb(228 255 248 / 10%), 0 20px 64px rgb(0 8 10 / 13%);
+  -webkit-backdrop-filter: blur(28px) saturate(135%);
+  backdrop-filter: blur(28px) saturate(135%);
+}
+.sana-account-hero::after { content: ''; position: absolute; z-index: -1; inset: 0 auto 0 0; width: 310px; background: radial-gradient(ellipse, rgb(111 228 188 / 13%), transparent 70%); pointer-events: none; }
+.sana-account-hero-art { position: absolute; z-index: -1; inset: 0; overflow: hidden; opacity: .6; pointer-events: none; }
+.sana-account-hero-art i { position: absolute; width: 410px; height: 410px; top: -213px; right: -77px; border: 1px solid rgb(174 231 215 / 18%); border-radius: 50%; transform: rotate(-26deg) scaleY(.82); }
+.sana-account-hero-art i:nth-child(2) { width: 510px; height: 510px; top: -263px; right: -127px; border-color: rgb(174 231 215 / 10%); }
+.sana-account-hero-art i:nth-child(3) { width: 610px; height: 610px; top: -313px; right: -177px; border-color: rgb(174 231 215 / 6%); }
+.sana-account-avatar-wrap { position: relative; flex: 0 0 auto; padding: 8px; border: 1px solid rgb(181 239 216 / 17%); border-radius: 50%; box-shadow: 0 0 48px rgb(100 222 187 / 10%); }
+.sana-account-avatar { width: 104px; height: 104px; display: grid; place-items: center; border: 1px solid rgb(225 255 244 / 26%); border-radius: 50%; background: radial-gradient(circle at 30% 15%, #a5e9ce, #5a9e8c 46%, #294c49 100%); color: #092a24; box-shadow: inset 0 2px 1px rgb(229 255 244 / 30%), inset 0 -8px 30px rgb(8 39 39 / 15%); font-size: 34px; font-weight: 650; letter-spacing: -.05em; }
+.sana-account-avatar-check { position: absolute; right: 4px; bottom: 7px; width: 28px; height: 28px; display: grid; place-items: center; border: 3px solid #163a32; border-radius: 50%; background: #b6efce; color: #163d30; }
+.sana-account-avatar-check svg { width: 15px; height: 15px; stroke-width: 2.5px; }
+.sana-account-welcome { min-width: 0; }
+.sana-account-eyebrow { margin-bottom: 10px !important; color: #b8d8cd; font-size: 11px; font-weight: 650; letter-spacing: .17em; text-transform: uppercase; }
+.sana-account-welcome h1 { color: #f0f8f4; font-size: clamp(30px, 4.1vw, 48px); font-weight: 550; letter-spacing: -.047em; line-height: 1.12; overflow-wrap: anywhere; text-wrap: balance; }
+.sana-account-intro { margin-top: 13px !important; color: #b5cac4; font-size: 14px; line-height: 1.7; }
+.sana-account-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 17px; margin-top: 21px; }
+.sana-account-role { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 7px 11px; border: 1px solid rgb(188 226 216 / 17%); border-radius: 8px; background: rgb(189 239 215 / 5%); color: #e1ece7; font-size: 12px; line-height: 1.3; }
+.sana-account-role svg { width: 16px; height: 16px; }
+.sana-account-status { display: inline-flex; align-items: center; gap: 7px; color: #b2d2c7; font-size: 12px; }
+.sana-account-status > span { width: 5px; height: 5px; flex: 0 0 auto; border-radius: 50%; background: #a6e6bf; box-shadow: 0 0 9px rgb(175 243 205 / 40%); }
+.sana-account-status--pending { color: #ead5a6; }
+.sana-account-status--pending > span { background: #e7c179; box-shadow: none; }
+
+.sana-account-grid { display: grid; grid-template-columns: 1.08fr 1fr; gap: 20px; }
+.sana-account-card { position: relative; min-width: 0; padding: 29px 30px; border: 1px solid rgb(189 225 215 / 15%); border-radius: 23px; background: linear-gradient(130deg, rgb(32 57 53 / 74%), rgb(17 36 34 / 82%)); box-shadow: inset 0 1px 0 rgb(245 255 250 / 5%), 0 12px 32px rgb(0 0 0 / 7%); -webkit-backdrop-filter: blur(24px) saturate(130%); backdrop-filter: blur(24px) saturate(130%); }
+.sana-account-card-heading { display: flex; align-items: center; gap: 13px; }
+.sana-account-icon-box { width: 43px; height: 43px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid rgb(175 229 214 / 18%); border-radius: 13px; background: linear-gradient(145deg, rgb(181 240 217 / 10%), rgb(181 240 217 / 2%)); color: #bee9d9; box-shadow: inset 0 1px 0 rgb(213 255 234 / 7%); }
+.sana-account-kicker { color: #a8c8ba; font-size: 10px; letter-spacing: .13em; line-height: 1.5; text-transform: uppercase; }
+.sana-account-card h2 { color: #eaf4ef; font-size: 19px; font-weight: 550; line-height: 1.3; letter-spacing: -.025em; }
+.sana-account-card-heading h2 { margin-top: 4px; }
+.sana-account-data { display: grid; gap: 0; margin-top: 23px !important; }
+.sana-account-data > div { display: grid; grid-template-columns: minmax(115px, .82fr) minmax(0, 1.3fr); gap: 16px; align-items: start; padding: 14px 0; border-bottom: 1px solid rgb(189 225 215 / 10%); }
+.sana-account-data > div:last-child { border-bottom: 0; }
+.sana-account-data dt { color: var(--account-muted); font-size: 12px; line-height: 1.65; }
+.sana-account-data dd { color: #e5f0eb; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+.sana-account-email-note { display: flex; align-items: flex-start; gap: 9px; margin-top: 15px; padding: 12px 13px; border: 1px solid rgb(153 213 186 / 11%); border-radius: 11px; background: rgb(148 209 180 / 4%); color: #b7d0c3; }
+.sana-account-email-note svg { width: 16px; height: 16px; margin-top: 1px; }
+.sana-account-email-note p { font-size: 12px; line-height: 1.65; }
+.sana-account-email-note--pending { color: #e6cea1; background: rgb(214 187 136 / 4%); border-color: rgb(225 195 149 / 13%); }
+.sana-account-details > .sana-account-button { margin-top: 17px; }
+.sana-account-card-description { margin-top: 20px !important; color: var(--account-muted); font-size: 13px; line-height: 1.8; }
+.sana-account-notifications { display: flex; flex-direction: column; }
+.sana-account-newsletter { display: flex; align-items: center; gap: 16px; justify-content: space-between; margin-top: 24px; cursor: pointer; }
+.sana-account-newsletter > span:first-child { display: grid; gap: 7px; }
+.sana-account-newsletter strong { color: #e8f2ed; font-size: 14px; font-weight: 500; line-height: 1.4; }
+.sana-account-newsletter > span > span { color: var(--account-muted); font-size: 12px; line-height: 1.6; }
+.sana-account-switch { position: relative; width: 46px; height: 28px; flex: 0 0 auto; }
+.sana-account-switch input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.sana-account-switch-track { position: absolute; inset: 0; border: 1px solid #658679; border-radius: 20px; background: #334a41; box-shadow: inset 0 2px 3px rgb(0 0 0 / 16%); transition: background 160ms, border-color 160ms, box-shadow 160ms; }
+.sana-account-switch-track i { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #c9d9d1; box-shadow: 0 2px 4px rgb(0 0 0 / 25%); transition: transform 180ms, background 180ms; }
+.sana-account-switch input:checked + .sana-account-switch-track { background: #a6e6c4; border-color: #b4f1d2; box-shadow: 0 0 15px rgb(133 231 182 / 13%); }
+.sana-account-switch input:checked + .sana-account-switch-track i { transform: translateX(18px); background: #174235; }
+.sana-account-switch input:disabled { cursor: wait; }
+.sana-account-switch input:disabled + .sana-account-switch-track { opacity: .6; }
+.sana-account-service-note { margin-top: 21px !important; padding-top: 18px; border-top: 1px solid rgb(189 225 215 / 10%); color: #a9bfb6; font-size: 12px; line-height: 1.8; }
+.sana-account-save-area { margin-top: auto; padding-top: 23px; }
+.sana-account-save-state { margin-bottom: 9px !important; color: #a8c8ba; font-size: 11px; line-height: 1.5; }
+.sana-account-button { display: inline-flex; justify-content: center; align-items: center; gap: 18px; min-height: 43px; max-width: 100%; padding: 11px 16px; border: 1px solid transparent; border-radius: 11px; cursor: pointer; font-size: 12px !important; font-weight: 600 !important; line-height: 1.5; transition: background 170ms, border-color 170ms, box-shadow 170ms, transform 170ms; text-align: left; }
+.sana-account-button svg { width: 17px; height: 17px; }
+.sana-account-button--primary { width: 100%; justify-content: space-between; color: #14392c; background: linear-gradient(115deg, #c5efc6, #a6e7d4); border-color: rgb(221 255 228 / 26%); box-shadow: 0 4px 18px rgb(94 185 142 / 12%), inset 0 1px 0 rgb(255 255 255 / 40%); }
+.sana-account-button--subtle { justify-content: space-between; color: #d8eee1; border-color: rgb(169 228 200 / 19%); background: rgb(198 245 220 / 4%); }
+.sana-account-button--text { padding: 8px 0; color: #c9eccd; background: transparent; border-radius: 5px; }
+.sana-account-button:disabled { cursor: default; box-shadow: none; transform: none; }
+.sana-account-button--primary:disabled { color: #adc8b7; background: #294339; border-color: #476255; }
+.sana-account-button--subtle:disabled, .sana-account-button--text:disabled { color: #809e90; }
+.sana-account-security > .sana-account-button { margin-top: 23px; }
+.sana-account-security .sana-account-card-description { max-width: 390px; }
+.sana-account-next { isolation: isolate; overflow: hidden; background: radial-gradient(ellipse at 102% 100%, rgb(128 162 110 / 16%), transparent 70%), linear-gradient(110deg, rgb(29 51 39 / 92%), rgb(33 57 39 / 75%)); }
+.sana-account-next h2 { max-width: 325px; margin-top: 14px; font-size: 24px; font-weight: 500; line-height: 1.3; letter-spacing: -.035em; text-wrap: balance; }
+.sana-account-next .sana-account-card-description { max-width: 360px; margin-top: 13px !important; color: #b6cbb7; }
+.sana-account-next .sana-account-button { margin-top: 14px; }
+.sana-account-next-art { position: absolute; z-index: -1; right: -115px; bottom: -150px; width: 270px; height: 270px; opacity: .35; pointer-events: none; transform: rotate(-20deg); }
+.sana-account-next-art span { position: absolute; inset: 0; border: 1px solid #a4c7a1; border-radius: 65px; }
+.sana-account-next-art span:nth-child(2) { inset: 18px; border-color: #9cb496; }
+.sana-account-next-art span:nth-child(3) { inset: 36px; border-color: #82917d; }
+.sana-account-footer { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 24px; padding: 0 4px; }
+.sana-account-footer p { display: flex; align-items: center; gap: 8px; color: #a2bab0; font-size: 11px; line-height: 1.6; }
+.sana-account-footer p svg { width: 14px; height: 14px; }
+.sana-account-logout { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 8px 10px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: #c2d2c9; cursor: pointer; font-size: 12px !important; transition: background 170ms, color 170ms; }
+.sana-account-logout svg { width: 16px; height: 16px; }
+.sana-account-logout:disabled { color: #80978b; cursor: wait; }
+
+@media (hover: hover) {
+  .sana-account-button--primary:not(:disabled):hover { background: linear-gradient(115deg, #d2f8d1, #b6efde); box-shadow: 0 5px 26px rgb(125 232 175 / 18%); transform: translateY(-1px); }
+  .sana-account-button--subtle:not(:disabled):hover { background: rgb(184 232 207 / 9%); border-color: rgb(188 237 211 / 32%); }
+  .sana-account-button--text:not(:disabled):hover { color: #ebffe8; }
+  .sana-account-logout:not(:disabled):hover { color: #f2dad4; background: rgb(209 145 128 / 7%); }
+}
+@keyframes sana-account-appear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 820px) {
+  .sana-account-hero { padding: 33px 27px; }
+  .sana-account-card { padding: 25px; }
+  .sana-account-data > div { grid-template-columns: 1fr; gap: 4px; padding-block: 11px; }
+}
+@media (max-width: 640px) {
+  .sana-account-hero { align-items: flex-start; flex-direction: column; gap: 22px; padding: 28px 24px; margin-bottom: 16px; border-radius: 23px; }
+  .sana-account-avatar-wrap { padding: 6px; }
+  .sana-account-avatar { width: 76px; height: 76px; font-size: 27px; }
+  .sana-account-avatar-check { right: 0; bottom: 2px; width: 24px; height: 24px; }
+  .sana-account-welcome h1 { font-size: 34px; }
+  .sana-account-eyebrow { font-size: 10px; letter-spacing: .13em; }
+  .sana-account-intro { max-width: 35ch; font-size: 13px; }
+  .sana-account-badges { margin-top: 18px; gap: 13px; }
+  .sana-account-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .sana-account-card { padding: 24px; border-radius: 20px; }
+  .sana-account-data > div { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 15px; }
+  .sana-account-footer { flex-wrap: wrap; margin-top: 16px; gap: 5px 12px; }
+  .sana-account-footer p { font-size: 10px; }
+  .sana-account-logout { padding-inline: 0; font-size: 11px !important; }
+}
+@media (max-width: 370px) {
+  .sana-account-hero, .sana-account-card { padding: 22px 19px; }
+  .sana-account-data > div { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .sana-account-newsletter { gap: 9px; }
+  .sana-account-welcome h1 { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sana-account, .sana-account *, .sana-account *::before, .sana-account *::after { animation: none !important; transition: none !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .sana-account-hero, .sana-account-card { -webkit-backdrop-filter: none; backdrop-filter: none; background: #17342d; }
+  .sana-account-next { background: #243a29; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sana-account-hero, .sana-account-card { background-color: #17342d; }
+}
+@media (forced-colors: active) {
+  .sana-account-avatar, .sana-account-status > span, .sana-account-switch-track, .sana-account-button { border: 1px solid ButtonText; }
+  .sana-account-switch-track i { background: ButtonText; }
+  .sana-account-switch input:checked + .sana-account-switch-track { background: Highlight; }
+  .sana-account-switch input:checked + .sana-account-switch-track i { background: HighlightText; }
+  .sana-account-hero-art, .sana-account-next-art { display: none; }
+}
