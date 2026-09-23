@@ -1,0 +1,431 @@
+{
+  "audit_date_utc": "2026-09-23T10:08:40.304264+00:00",
+  "scope": "Backend Python runtime, development test dependencies and conditional platform/version pins only.",
+  "tool": {
+    "name": "pip-audit",
+    "version": "2.10.1",
+    "vulnerability_service": "pypi",
+    "strict": true,
+    "isolated_tool_environment": true
+  },
+  "method": "Resolve the installed runtime dependency graph from package metadata; audit each exact locked package/version, including inactive platform markers, using --no-deps --disable-pip. Alternate versions of the same package are audited separately. No ignored advisories.",
+  "summary": {
+    "audited_package_versions": 31,
+    "runtime_package_versions": 24,
+    "development_package_versions": 7,
+    "known_vulnerabilities": 0,
+    "skipped_packages": 0,
+    "runtime_versions_upgraded": 0
+  },
+  "dependencies": [
+    {
+      "name": "annotated-doc",
+      "version": "0.0.5",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "annotated-types",
+      "version": "0.8.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "anyio",
+      "version": "4.15.1",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "certifi",
+      "version": "2026.7.22",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "click",
+      "version": "8.5.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "colorama",
+      "version": "0.4.6",
+      "vulns": [],
+      "scope": "development",
+      "marker": "sys_platform == \"win32\""
+    },
+    {
+      "name": "exceptiongroup",
+      "version": "1.3.1",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": "python_version < \"3.11\""
+    },
+    {
+      "name": "fastapi",
+      "version": "0.141.1",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "h11",
+      "version": "0.16.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "httpcore",
+      "version": "1.0.9",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "httptools",
+      "version": "0.8.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "httpx",
+      "version": "0.28.1",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "idna",
+      "version": "3.20",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "iniconfig",
+      "version": "2.3.0",
+      "vulns": [],
+      "scope": "development",
+      "marker": null
+    },
+    {
+      "name": "packaging",
+      "version": "26.3",
+      "vulns": [],
+      "scope": "development",
+      "marker": null
+    },
+    {
+      "name": "pluggy",
+      "version": "1.6.0",
+      "vulns": [],
+      "scope": "development",
+      "marker": null
+    },
+    {
+      "name": "pydantic",
+      "version": "2.13.5",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "pydantic-core",
+      "version": "2.46.5",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "pygments",
+      "version": "2.21.0",
+      "vulns": [],
+      "scope": "development",
+      "marker": null
+    },
+    {
+      "name": "pytest",
+      "version": "9.1.1",
+      "vulns": [],
+      "scope": "development",
+      "marker": null
+    },
+    {
+      "name": "python-dotenv",
+      "version": "1.2.3",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "pyyaml",
+      "version": "6.0.3",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "starlette",
+      "version": "1.7.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "tomli",
+      "version": "2.4.1",
+      "vulns": [],
+      "scope": "development",
+      "marker": "python_version < \"3.11\""
+    },
+    {
+      "name": "typing-extensions",
+      "version": "4.16.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "typing-inspection",
+      "version": "0.4.4",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "uvicorn",
+      "version": "0.53.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "uvloop",
+      "version": "0.22.1",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": "sys_platform != \"win32\" and sys_platform != \"cygwin\" and platform_python_implementation != \"PyPy\""
+    },
+    {
+      "name": "watchfiles",
+      "version": "1.3.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "websockets",
+      "version": "16.1",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": "python_version < \"3.11\""
+    },
+    {
+      "name": "websockets",
+      "version": "17.1",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": "python_version >= \"3.11\""
+    }
+  ],
+  "requirements_sha256": {
+    "backend/requirements.txt": "21132a31fc0574d5cea96651ec6e28cfe6e02226c1cd51354acf41d322c50e5a",
+    "backend/requirements.lock.txt": "9d23fd07a18fa58b367e0abdd488ac94584d7bbc2be3d4905fcf4caca1d96cef",
+    "backend/requirements-dev.txt": "62eb5818baeaff54d25f7371db81af19160e983fa461eb007b57e9c6d77eb0d4"
+  },
+  "reproducibility": {
+    "runtime_install": {
+      "exact_versions_match": true,
+      "runtime_package_count": 21,
+      "packages": {
+        "annotated-doc": "0.0.5",
+        "annotated-types": "0.8.0",
+        "anyio": "4.15.1",
+        "certifi": "2026.7.22",
+        "click": "8.5.0",
+        "fastapi": "0.141.1",
+        "h11": "0.16.0",
+        "httpcore": "1.0.9",
+        "httptools": "0.8.0",
+        "httpx": "0.28.1",
+        "idna": "3.20",
+        "pydantic": "2.13.5",
+        "pydantic-core": "2.46.5",
+        "python-dotenv": "1.2.3",
+        "pyyaml": "6.0.3",
+        "starlette": "1.7.0",
+        "typing-extensions": "4.16.0",
+        "typing-inspection": "0.4.4",
+        "uvicorn": "0.53.0",
+        "watchfiles": "1.3.0",
+        "websockets": "17.1"
+      },
+      "pip_check": "passed",
+      "runtime_excludes": [
+        "pytest",
+        "pypdf",
+        "pip-audit"
+      ]
+    },
+    "tested_platform": "Windows / CPython 3.14.4",
+    "development_install_and_pip_check": "passed",
+    "metadata_closure_checks": [
+      {
+        "platform": "win32",
+        "python": "3.10",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "win32",
+        "python": "3.11",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "win32",
+        "python": "3.12",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "win32",
+        "python": "3.13",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "win32",
+        "python": "3.14",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "linux",
+        "python": "3.10",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "linux",
+        "python": "3.11",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "linux",
+        "python": "3.12",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "linux",
+        "python": "3.13",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "linux",
+        "python": "3.14",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "darwin",
+        "python": "3.10",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "darwin",
+        "python": "3.11",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "darwin",
+        "python": "3.12",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "darwin",
+        "python": "3.13",
+        "dependency_metadata_closed": true
+      },
+      {
+        "platform": "darwin",
+        "python": "3.14",
+        "dependency_metadata_closed": true
+      }
+    ],
+    "install_command": "python -m pip install -r backend/requirements.txt",
+    "active_platform_reaudit_command": "python -m pip_audit --strict -r backend/requirements-dev.txt",
+    "backend_tests": {
+      "command": "python -m pytest tests -q",
+      "result": "318 passed",
+      "environment": "Clean runtime install followed by pinned development requirements; dotenv loading disabled, external AI keys blank, explicit development settings.",
+      "warnings": [
+        "Starlette TestClient deprecates the httpx adapter; no runtime dependency upgrade performed for this test-only warning."
+      ]
+    }
+  },
+  "primary_advisory_cross_checks": [
+    {
+      "package": "starlette",
+      "advisory": "GHSA-jp82-jpqv-5vv3",
+      "cve": "CVE-2026-54282",
+      "patched_version": "1.3.0",
+      "audited_version": "1.7.0",
+      "result": "not affected",
+      "source": "https://github.com/Kludex/starlette/security/advisories/GHSA-jp82-jpqv-5vv3"
+    },
+    {
+      "package": "starlette",
+      "advisory": "GHSA-x746-7m8f-x49c",
+      "cve": null,
+      "patched_version": "1.1.0",
+      "audited_version": "1.7.0",
+      "result": "not affected",
+      "source": "https://github.com/Kludex/starlette/security/advisories/GHSA-x746-7m8f-x49c"
+    },
+    {
+      "package": "starlette",
+      "advisory": "GHSA-82w8-qh3p-5jfq",
+      "cve": "CVE-2026-54283",
+      "patched_version": "1.3.1",
+      "audited_version": "1.7.0",
+      "result": "not affected",
+      "source": "https://github.com/Kludex/starlette/security/advisories/GHSA-82w8-qh3p-5jfq"
+    },
+    {
+      "package": "starlette",
+      "advisory": "GHSA-86qp-5c8j-p5mr",
+      "cve": "CVE-2026-48710",
+      "patched_version": "1.0.1",
+      "audited_version": "1.7.0",
+      "result": "not affected",
+      "source": "https://github.com/Kludex/starlette/security/advisories/GHSA-86qp-5c8j-p5mr"
+    },
+    {
+      "package": "starlette",
+      "advisory": "GHSA-wqp7-x3pw-xc5r",
+      "cve": null,
+      "patched_version": "1.1.0",
+      "audited_version": "1.7.0",
+      "result": "not affected",
+      "source": "https://github.com/Kludex/starlette/security/advisories/GHSA-wqp7-x3pw-xc5r"
+    },
+    {
+      "package": "h11",
+      "advisory": "GHSA-vqfr-h8mv-ghfj",
+      "cve": "CVE-2025-43859",
+      "patched_version": "0.16.0",
+      "audited_version": "0.16.0",
+      "result": "not affected",
+      "source": "https://github.com/python-hyper/h11/security/advisories/GHSA-vqfr-h8mv-ghfj"
+    }
+  ],
+  "audit_documentation": "https://github.com/pypa/pip-audit#security-model",
+  "limitations": [
+    "Only published advisories available to PyPI at audit time; zero findings does not establish absence of unknown vulnerabilities or malicious packages.",
+    "The Python interpreter, pip bootstrap tool, operating-system/native shared libraries, frontend packages, unused pypdf package and secret files are outside this dependency audit.",
+    "Exact versions are pinned; distribution artifacts are not hash-pinned.",
+    "Only Windows / CPython 3.14.4 was installed and executed. Other platform/Python dependency closures were checked against package metadata only."
+  ]
+}

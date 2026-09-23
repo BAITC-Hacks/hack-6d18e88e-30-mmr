@@ -10,6 +10,13 @@ export interface ClarificationQuestion {
   id: string;
   field: string;
   question: string;
+  reason?: string;
+}
+
+export interface ClarificationAnswer {
+  questionId: string;
+  field: string;
+  answer: string;
 }
 
 export interface AiDraftAnalysis {
@@ -32,4 +39,29 @@ export interface AiInspection {
   fallbackUsed: boolean;
   reason?: string;
   durationMs: number;
+}
+
+export interface GenerateCardPayload {
+  draft: string;
+  industry: string;
+  answers: ClarificationAnswer[];
+}
+
+export interface TaskDraftSeed {
+  id: string;
+  title: string;
+  industry: string;
+  text: string;
+  completeness: 'weak' | 'medium' | 'high';
+  estimatedInitialScore: number;
+}
+
+export interface PromptInspectorData {
+  systemPrompt: string;
+  analysisPromptTemplate: string;
+  cardGenerationPromptTemplate: string;
+  inputJsonSchema: Record<string, unknown>;
+  outputJsonSchema: Record<string, unknown>;
+  safetyRules: string[];
+  errorHandlingStrategy: string;
 }
