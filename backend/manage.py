@@ -1,0 +1,46 @@
+"""Local administrator tools: python -m backend.manage --help."""
+import argparse
+from email import policy
+from email.parser import BytesParser
+
+from .config import load_settings
+from .database import connect, initialize
+from .services.mail import process_outbox
+
+
+def main():
+    parser = argparse.ArgumentParser(description="AI Sana administrator tools")
+    sub = parser.add_subparsers(dest="command", required=True)
+    admin = sub.add_parser("make-admin", help="Promote an existing verified account")
+    admin.add_argument("email")
+    sub.add_parser("send-pending", help="Process up to 100 queued emails now")
+    sub.add_parser("mail-status", help="Show the last 20 mail jobs, without message bodies")
+    preview = sub.add_parser("preview-mail", help="Read a local .eml preview (file mode only)")
+    preview.add_argument("id", type=int)
+    args = parser.parse_args()
+    settings = load_settings()
+    initialize(settings)
+    if args.command == "make-admin":
+        with connect(settings) as db:
+            result = db.execute("UPDATE users SET role = 'admin' WHERE email = ? AND email_verified = 1", (args.email.strip().lower(),))
+            if result.rowcount != 1:
+                parser.exit(1, "Account not found or email has not been verified.\n")
+        print("Administrator role assigned.")
+    elif args.command == "send-pending":
+        print(f"Processed: {process_outbox(settings, batch_size=100)}")
+    elif args.command == "mail-status":
+        with connect(settings) as db:
+            for row in db.execute("SELECT id, status, attempts, last_error FROM outbox ORDER BY id DESC LIMIT 20"):
+                print(dict(row))
+    else:
+        if settings.mail_backend != "file":
+            parser.exit(1, "Preview is available only with MAIL_BACKEND=file.\n")
+        path = settings.mail_directory / f"{args.id:08d}.eml"
+        if not path.is_file():
+            parser.exit(1, "Preview not found. Check mail-status or run send-pending.\n")
+        message = BytesParser(policy=policy.default).parsebytes(path.read_bytes())
+        print(message.get_content())
+
+
+if __name__ == "__main__":
+    main()

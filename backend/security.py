@@ -9,10 +9,32 @@ from urllib.parse import urlsplit
 
 from starlette._utils import get_route_path
 from starlette.datastructures import MutableHeaders
+from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from settings import Settings, hostname
+
+
+def is_account_api(path: str) -> bool:
+    return any(path == prefix or path.startswith(prefix + '/') for prefix in ('/api/auth', '/api/mail'))
+
+
+class ScopedCORSMiddleware:
+    """Only account routes use browser cookies; AI remains a bearer-only API."""
+
+    def __init__(self, app: ASGIApp, settings: Settings):
+        common = {'allow_origins': list(settings.allowed_origins),
+                  'allow_headers': ['Content-Type', 'Authorization']}
+        self.accounts = CORSMiddleware(app, allow_credentials=True,
+                                       allow_methods=['GET', 'POST', 'PATCH', 'OPTIONS'], **common)
+        self.other = CORSMiddleware(app, allow_credentials=False,
+                                    allow_methods=['GET', 'POST', 'OPTIONS'], **common)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        app = self.accounts if scope['type'] == 'http' and is_account_api(get_route_path(scope)) else self.other
+        await app(scope, receive, send)
 
 
 class RateLimiter:
@@ -93,6 +115,7 @@ class SecurityMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        path = get_route_path(scope)
 
         async def safe_send(message):
             if message["type"] == "http.response.start":
@@ -100,6 +123,12 @@ class SecurityMiddleware:
                 headers["Cache-Control"] = "no-store"
                 headers["X-Content-Type-Options"] = "nosniff"
                 headers["X-Frame-Options"] = "DENY"
+                headers["Referrer-Policy"] = "no-referrer"
+                if path in {'/account', '/account.js', '/account.css'}:
+                    headers['Content-Security-Policy'] = (
+                        "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+                        "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+                    )
             await send(message)
 
         async def reject(status, code, message, headers=None):
@@ -110,6 +139,8 @@ class SecurityMiddleware:
             if len(request_origins) == 1 and request_origins[0] in self.settings.allowed_origins:
                 error_headers["Access-Control-Allow-Origin"] = request_origins[0]
                 error_headers["Vary"] = "Origin"
+                if is_account_api(path):
+                    error_headers['Access-Control-Allow-Credentials'] = 'true'
             response = JSONResponse({"detail": {"code": code, "message": message}}, status_code=status, headers=error_headers)
             await response(scope, receive, safe_send)
 
@@ -131,8 +162,11 @@ class SecurityMiddleware:
             return
 
         # Use the router's own root_path handling, including mounted/gateway URLs.
-        path = get_route_path(scope)
         is_api = path == "/api" or path.startswith("/api/")
+        mutating = scope['method'] in {'POST', 'PATCH', 'PUT', 'DELETE'}
+        if is_api and mutating and Request(scope).cookies.get('ai_sana_session') and not origins:
+            await reject(403, 'CSRF_ORIGIN_REQUIRED', 'Cookie-authenticated changes require a trusted Origin.')
+            return
         is_docs = self.settings.environment != "production" and path.rstrip("/") in {
             "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect",
         }
@@ -147,7 +181,7 @@ class SecurityMiddleware:
                 await reject(401, "UNAUTHORIZED", "A valid bearer token is required.", {"WWW-Authenticate": "Bearer"})
                 return
 
-        if is_api and scope["method"] == "POST":
+        if is_api and mutating:
             retry_after = self.limiter.check(client)
             if retry_after:
                 await reject(429, "RATE_LIMITED", "Request budget exceeded. Try again later.", {"Retry-After": str(retry_after)})

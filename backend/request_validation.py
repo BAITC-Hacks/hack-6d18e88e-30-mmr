@@ -96,7 +96,10 @@ class StrictJSONMiddleware:
             return
 
         # Match the router's root_path semantics when deployed under a URL prefix.
-        if scope.get('method') == 'POST' and get_route_path(scope).startswith('/api/'):
+        path = get_route_path(scope)
+        if scope.get('method') in {'POST', 'PATCH', 'PUT', 'DELETE'} and path.startswith('/api/'):
+            # Logout has no request model; an empty body is valid for this route only.
+            allow_empty = scope.get('method') == 'POST' and path.rstrip('/') == '/api/auth/logout'
             headers = {}
             for name, value in scope.get('headers', []):
                 name = name.lower()
@@ -112,7 +115,8 @@ class StrictJSONMiddleware:
             parameters = [part.partition('=') for part in content_type[1:]]
             valid_charset = all(name.strip() != 'charset' or value.strip(' "') in ('utf-8', 'utf8')
                                 for name, _separator, value in parameters)
-            if not json_type or not valid_charset or headers.get(b'content-encoding', 'identity').lower() != 'identity':
+            empty_media_type = allow_empty and not media_type
+            if (not json_type and not empty_media_type) or not valid_charset or headers.get(b'content-encoding', 'identity').lower() != 'identity':
                 await error_response(415, 'UNSUPPORTED_MEDIA_TYPE', 'Используйте несжатый JSON в кодировке UTF-8.')(scope, receive, send)
                 return
 
@@ -162,8 +166,12 @@ class StrictJSONMiddleware:
             if expected_length is not None and expected_length != len(body):
                 await error_response(400, 'INVALID_HEADERS', 'Длина запроса не совпадает с заголовком.')(scope, receive, send)
                 return
+            if body and not json_type:
+                await error_response(415, 'UNSUPPORTED_MEDIA_TYPE', 'Используйте несжатый JSON в кодировке UTF-8.')(scope, receive, send)
+                return
             try:
-                _strict_json(body)
+                if body or not allow_empty:
+                    _strict_json(body)
             except (ValueError, UnicodeError, RecursionError, OverflowError):
                 await error_response(400, 'INVALID_JSON', 'Некорректный JSON. Проверьте формат запроса.')(scope, receive, send)
                 return

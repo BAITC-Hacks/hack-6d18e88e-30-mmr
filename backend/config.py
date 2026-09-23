@@ -1,0 +1,130 @@
+"""Account/mail settings extend the common API security configuration."""
+
+import os
+from dataclasses import dataclass, field, fields
+from pathlib import Path
+from urllib.parse import urlsplit
+
+from dotenv import load_dotenv
+
+from .settings import Settings as CoreSettings
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_environment() -> None:
+    load_dotenv(ROOT / "backend" / ".env", override=False)
+    load_dotenv(ROOT / ".env", override=False)
+
+
+def _integer(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except ValueError:
+        raise ValueError(f"{name} must be a valid integer") from None
+
+
+def _boolean(name: str, default: bool | None) -> bool | None:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized not in {"true", "false"}:
+        raise ValueError(f"{name} must be true or false")
+    return normalized == "true"
+
+
+def _account_environment() -> dict:
+    return {
+        "database_path": ROOT / os.getenv("DATABASE_PATH", "backend/data/app.sqlite3"),
+        "auth_page_url": os.getenv("AUTH_PAGE_URL", "").rstrip("/"),
+        "cookie_secure": _boolean("COOKIE_SECURE", None),
+        "session_hours": _integer("SESSION_HOURS", 24),
+        "mail_backend": os.getenv("MAIL_BACKEND", "file"),
+        "mail_directory": ROOT / os.getenv("MAIL_DIRECTORY", "backend/data/mail"),
+        "mail_from": os.getenv("MAIL_FROM", "AI Sana <noreply@example.com>"),
+        "smtp_host": os.getenv("SMTP_HOST", ""),
+        "smtp_port": _integer("SMTP_PORT", 587),
+        "smtp_user": os.getenv("SMTP_USER", ""),
+        "smtp_password": os.getenv("SMTP_PASSWORD", ""),
+        "mail_worker_enabled": _boolean("MAIL_WORKER_ENABLED", True),
+    }
+
+
+@dataclass(frozen=True)
+class Settings(CoreSettings):
+    database_path: Path = ROOT / "backend/data/app.sqlite3"
+    auth_page_url: str = ""
+    cookie_secure: bool | None = None
+    session_hours: int = 24
+    mail_backend: str = "file"
+    mail_directory: Path = ROOT / "backend/data/mail"
+    mail_from: str = "AI Sana <noreply@example.com>"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = field(default="", repr=False)
+    mail_worker_enabled: bool = True
+
+    def __post_init__(self):
+        super().__post_init__()
+        production = self.environment == "production"
+        if self.cookie_secure is not None and type(self.cookie_secure) is not bool:
+            raise ValueError("COOKIE_SECURE must be a boolean")
+        secure = production if self.cookie_secure is None else self.cookie_secure
+        if production and not secure:
+            raise ValueError("Production requires COOKIE_SECURE=true")
+        object.__setattr__(self, "cookie_secure", secure)
+        auth_url = self.auth_page_url or (
+            f"{self.allowed_origins[0]}/account" if production else "http://localhost:8000/account"
+        )
+        try:
+            url = urlsplit(auth_url)
+            if (url.scheme not in ({"https"} if production else {"http", "https"})
+                    or not url.hostname or url.username is not None or url.password is not None
+                    or url.query or url.fragment or any(ord(char) < 33 for char in auth_url)):
+                raise ValueError
+            _ = url.port
+        except ValueError:
+            raise ValueError("AUTH_PAGE_URL must be an HTTP(S) URL without credentials, query or fragment; HTTPS is required in production") from None
+        object.__setattr__(self, "auth_page_url", auth_url.rstrip("/"))
+        object.__setattr__(self, "database_path", Path(self.database_path))
+        object.__setattr__(self, "mail_directory", Path(self.mail_directory))
+        if self.mail_backend not in {"file", "smtp"}:
+            raise ValueError("MAIL_BACKEND must be file or smtp")
+        if self.mail_backend == "smtp" and not self.smtp_host:
+            raise ValueError("SMTP_HOST is required for SMTP delivery")
+        if bool(self.smtp_user) != bool(self.smtp_password):
+            raise ValueError("Set both SMTP_USER and SMTP_PASSWORD")
+        if type(self.session_hours) is not int or not 1 <= self.session_hours <= 8760:
+            raise ValueError("SESSION_HOURS must be an integer between 1 and 8760")
+        if type(self.smtp_port) is not int or not 1 <= self.smtp_port <= 65535:
+            raise ValueError("SMTP_PORT must be an integer between 1 and 65535")
+        if type(self.mail_worker_enabled) is not bool:
+            raise ValueError("MAIL_WORKER_ENABLED must be a boolean")
+        if any(char in self.mail_from for char in "\r\n"):
+            raise ValueError("MAIL_FROM must not contain line breaks")
+
+    @classmethod
+    def from_core(cls, settings: CoreSettings):
+        """Preserve explicit security settings while honoring account paths from env."""
+        _load_environment()
+        core = {item.name: getattr(settings, item.name) for item in fields(CoreSettings)}
+        return cls(**core, **_account_environment())
+
+    @classmethod
+    def from_env(cls):
+        _load_environment()
+        core = CoreSettings.from_env()
+        # Retain the accounts branch's legacy CORS_ORIGINS setting as an alias;
+        # the validated API_ALLOWED_ORIGINS configuration always takes precedence.
+        values = {item.name: getattr(core, item.name) for item in fields(CoreSettings)}
+        if "API_ALLOWED_ORIGINS" not in os.environ and "CORS_ORIGINS" in os.environ:
+            values["allowed_origins"] = tuple(
+                item.strip().rstrip("/") for item in os.environ["CORS_ORIGINS"].split(",") if item.strip()
+            )
+        return cls(**values, **_account_environment())
+
+
+def load_settings() -> Settings:
+    return Settings.from_env()

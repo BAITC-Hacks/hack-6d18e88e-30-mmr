@@ -1,5 +1,5 @@
 {
-  "audit_date_utc": "2026-09-23T10:08:40.304264+00:00",
+  "audit_date_utc": "2026-09-23T10:48:10.951803+00:00",
   "scope": "Backend Python runtime, development test dependencies and conditional platform/version pins only.",
   "tool": {
     "name": "pip-audit",
@@ -10,12 +10,13 @@
   },
   "method": "Resolve the installed runtime dependency graph from package metadata; audit each exact locked package/version, including inactive platform markers, using --no-deps --disable-pip. Alternate versions of the same package are audited separately. No ignored advisories.",
   "summary": {
-    "audited_package_versions": 31,
-    "runtime_package_versions": 24,
+    "audited_package_versions": 38,
+    "runtime_package_versions": 31,
     "development_package_versions": 7,
     "known_vulnerabilities": 0,
     "skipped_packages": 0,
-    "runtime_versions_upgraded": 0
+    "runtime_versions_upgraded": 0,
+    "new_runtime_package_versions": 7
   },
   "dependencies": [
     {
@@ -40,8 +41,29 @@
       "marker": null
     },
     {
+      "name": "argon2-cffi",
+      "version": "25.1.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "argon2-cffi-bindings",
+      "version": "26.1.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
       "name": "certifi",
       "version": "2026.7.22",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "cffi",
+      "version": "2.1.1",
       "vulns": [],
       "scope": "runtime",
       "marker": null
@@ -59,6 +81,20 @@
       "vulns": [],
       "scope": "development",
       "marker": "sys_platform == \"win32\""
+    },
+    {
+      "name": "dnspython",
+      "version": "2.8.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "email-validator",
+      "version": "2.3.0",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
     },
     {
       "name": "exceptiongroup",
@@ -128,6 +164,20 @@
       "version": "1.6.0",
       "vulns": [],
       "scope": "development",
+      "marker": null
+    },
+    {
+      "name": "pwdlib",
+      "version": "0.3.1",
+      "vulns": [],
+      "scope": "runtime",
+      "marker": null
+    },
+    {
+      "name": "pycparser",
+      "version": "3.0",
+      "vulns": [],
+      "scope": "runtime",
       "marker": null
     },
     {
@@ -237,26 +287,33 @@
     }
   ],
   "requirements_sha256": {
-    "backend/requirements.txt": "21132a31fc0574d5cea96651ec6e28cfe6e02226c1cd51354acf41d322c50e5a",
-    "backend/requirements.lock.txt": "9d23fd07a18fa58b367e0abdd488ac94584d7bbc2be3d4905fcf4caca1d96cef",
-    "backend/requirements-dev.txt": "62eb5818baeaff54d25f7371db81af19160e983fa461eb007b57e9c6d77eb0d4"
+    "backend/requirements.txt": "9b342377dce0b66b8366d05d6e3787e42beb43fd3d326c46dbf350f9f5be30d3",
+    "backend/requirements.lock.txt": "217e228f00884eae5134197d5e1ffc13389c54b1be17fdfbdaff1b49281a5a80",
+    "backend/requirements-dev.txt": "2a9a7ba513df3619df5ab1deab37e6c7cedd851e9e6f224a5506f880484a63b6"
   },
   "reproducibility": {
     "runtime_install": {
       "exact_versions_match": true,
-      "runtime_package_count": 21,
+      "runtime_package_count": 28,
       "packages": {
         "annotated-doc": "0.0.5",
         "annotated-types": "0.8.0",
         "anyio": "4.15.1",
+        "argon2-cffi": "25.1.0",
+        "argon2-cffi-bindings": "26.1.0",
         "certifi": "2026.7.22",
+        "cffi": "2.1.1",
         "click": "8.5.0",
+        "dnspython": "2.8.0",
+        "email-validator": "2.3.0",
         "fastapi": "0.141.1",
         "h11": "0.16.0",
         "httpcore": "1.0.9",
         "httptools": "0.8.0",
         "httpx": "0.28.1",
         "idna": "3.20",
+        "pwdlib": "0.3.1",
+        "pycparser": "3.0",
         "pydantic": "2.13.5",
         "pydantic-core": "2.46.5",
         "python-dotenv": "1.2.3",
@@ -281,89 +338,102 @@
       {
         "platform": "win32",
         "python": "3.10",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "win32",
         "python": "3.11",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "win32",
         "python": "3.12",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "win32",
         "python": "3.13",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "win32",
         "python": "3.14",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "linux",
         "python": "3.10",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "linux",
         "python": "3.11",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "linux",
         "python": "3.12",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "linux",
         "python": "3.13",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "linux",
         "python": "3.14",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "darwin",
         "python": "3.10",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "darwin",
         "python": "3.11",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "darwin",
         "python": "3.12",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "darwin",
         "python": "3.13",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       },
       {
         "platform": "darwin",
         "python": "3.14",
-        "dependency_metadata_closed": true
+        "dependency_metadata_closed": true,
+        "errors": []
       }
     ],
     "install_command": "python -m pip install -r backend/requirements.txt",
     "active_platform_reaudit_command": "python -m pip_audit --strict -r backend/requirements-dev.txt",
-    "backend_tests": {
-      "command": "python -m pytest tests -q",
-      "result": "318 passed",
-      "environment": "Clean runtime install followed by pinned development requirements; dotenv loading disabled, external AI keys blank, explicit development settings.",
-      "warnings": [
-        "Starlette TestClient deprecates the httpx adapter; no runtime dependency upgrade performed for this test-only warning."
-      ]
-    }
+    "dependency_smoke_checks": [
+      "Argon2 password hashing and verification passed",
+      "Incorrect password verification rejected",
+      "Pydantic EmailStr normalization passed",
+      "Pydantic EmailStr invalid address rejected"
+    ]
   },
   "primary_advisory_cross_checks": [
     {
@@ -427,5 +497,27 @@
     "The Python interpreter, pip bootstrap tool, operating-system/native shared libraries, frontend packages, unused pypdf package and secret files are outside this dependency audit.",
     "Exact versions are pinned; distribution artifacts are not hash-pinned.",
     "Only Windows / CPython 3.14.4 was installed and executed. Other platform/Python dependency closures were checked against package metadata only."
+  ],
+  "primary_advisory_index_checks": [
+    {
+      "package": "pwdlib",
+      "result": "No published advisories in the maintainer repository index at review time; package-version vulnerability lookup also passed pip-audit.",
+      "source": "https://github.com/frankie567/pwdlib/security/advisories"
+    },
+    {
+      "package": "argon2-cffi",
+      "result": "No published advisories in the maintainer repository index at review time; package-version vulnerability lookup also passed pip-audit.",
+      "source": "https://github.com/hynek/argon2-cffi/security/advisories"
+    },
+    {
+      "package": "email-validator",
+      "result": "No published advisories in the maintainer repository index at review time; package-version vulnerability lookup also passed pip-audit.",
+      "source": "https://github.com/JoshData/python-email-validator/security/advisories"
+    },
+    {
+      "package": "dnspython",
+      "result": "No published advisories in the maintainer repository index at review time; package-version vulnerability lookup also passed pip-audit.",
+      "source": "https://github.com/rthalley/dnspython/security/advisories"
+    }
   ]
 }

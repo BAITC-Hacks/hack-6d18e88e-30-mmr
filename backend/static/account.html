@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Аккаунт — AI Sana</title>
+  <link rel="stylesheet" href="account.css">
+  <script src="account.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><span class="brand">AI SANA</span><h1>Ваш аккаунт</h1><p>Бизнес и студенты — вместе над практическими задачами.</p></header>
+    <p id="message" role="status" aria-live="polite"></p>
+    <nav aria-label="Доступ к аккаунту" id="navigation">
+      <button type="button" data-view="login">Вход</button>
+      <button type="button" data-view="register">Регистрация</button>
+      <button type="button" data-view="forgot">Забыли пароль?</button>
+    </nav>
+    <section id="login" hidden>
+      <h2>Войти</h2>
+      <form id="login-form">
+        <label>Email<input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+        <label>Пароль<input name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
+        <button type="submit">Войти</button>
+      </form>
+      <button type="button" data-view="resend">Отправить подтверждение email ещё раз</button>
+    </section>
+    <section id="register" hidden>
+      <h2>Создать аккаунт</h2>
+      <form id="register-form">
+        <label>Имя<input name="full_name" autocomplete="name" maxlength="100" required></label>
+        <label>Email<input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+        <label>Пароль — от 12 символов<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+        <label>Я представляю<select name="role"><option value="student">Студенческую команду</option><option value="business">Бизнес</option></select></label>
+        <label class="check"><input name="newsletter_opt_in" type="checkbox">Хочу получать новости AI Sana по email. Можно отписаться в любой момент.</label>
+        <button type="submit">Зарегистрироваться</button>
+      </form>
+    </section>
+    <section id="forgot" hidden>
+      <h2>Восстановить доступ</h2><p>Отправим ссылку для смены пароля.</p>
+      <form id="forgot-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><button type="submit">Получить ссылку</button></form>
+    </section>
+    <section id="resend" hidden>
+      <h2>Подтвердить почту</h2>
+      <form id="resend-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><button type="submit">Отправить письмо</button></form>
+    </section>
+    <section id="reset" hidden>
+      <h2>Новый пароль</h2>
+      <form id="reset-form"><label>Пароль — от 12 символов<input name="new_password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><label>Повторите пароль<input name="confirm_password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><button type="submit">Сохранить пароль</button></form>
+    </section>
+    <section id="verify" hidden><h2>Подтверждение email</h2><form id="verify-form"><button type="submit">Подтвердить мой email</button></form></section>
+    <section id="unsubscribe" hidden><h2>Отписаться от новостей</h2><form id="unsubscribe-form"><button type="submit">Подтвердить отписку</button></form></section>
+    <section id="profile" hidden>
+      <h2 id="profile-name"></h2><p id="profile-email"></p><p id="profile-role"></p>
+      <form id="preferences-form"><label class="check"><input id="newsletter" name="newsletter_opt_in" type="checkbox">Получать новости по email</label><button type="submit">Сохранить настройки</button></form>
+      <button id="logout" type="button">Выйти</button>
+    </section>
+    <footer>TaskRank &amp; TeamMatch</footer>
+  </main>
+</body>
+</html>

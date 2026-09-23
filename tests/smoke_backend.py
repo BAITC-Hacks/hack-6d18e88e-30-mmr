@@ -6,11 +6,17 @@ import socket
 import subprocess
 import sys
 import time
+from tempfile import TemporaryDirectory
 
 import httpx
 
 
 def main():
+    with TemporaryDirectory(prefix='ai-sana-smoke-') as account_data:
+        run_smoke(Path(account_data))
+
+
+def run_smoke(account_data: Path):
     root = Path(__file__).resolve().parents[1]
     with socket.socket() as listener:
         listener.bind(('127.0.0.1', 0))
@@ -19,6 +25,9 @@ def main():
     env = {**os.environ, 'PYTHON_DOTENV_DISABLED': '1', 'OPENAI_API_KEY': '', 'NVIDIA_API_KEY': '',
            'AI_MODEL': '', 'APP_ENV': 'development', 'API_ACCESS_TOKEN': token,
            'API_ALLOWED_HOSTS': '127.0.0.1', 'API_ALLOWED_ORIGINS': 'http://localhost:5173',
+           'DATABASE_PATH': str(account_data / 'accounts.sqlite3'), 'MAIL_DIRECTORY': str(account_data / 'mail'),
+           'MAIL_BACKEND': 'file', 'MAIL_WORKER_ENABLED': 'false', 'SMTP_USER': '', 'SMTP_PASSWORD': '',
+           'SMTP_HOST': '', 'COOKIE_SECURE': 'false', 'AUTH_PAGE_URL': f'http://127.0.0.1:{port}/account',
            'API_RATE_LIMIT_PER_CLIENT': '60', 'API_RATE_LIMIT_GLOBAL': '300', 'API_RATE_LIMIT_WINDOW_SECONDS': '60'}
     process = subprocess.Popen(
         [sys.executable, '-m', 'uvicorn', 'main:app', '--app-dir', 'backend', '--host', '127.0.0.1',

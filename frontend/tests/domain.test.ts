@@ -267,3 +267,60 @@ test('reset creates fresh seed objects and restores the full original demo', () 
   assert.equal(current().activeRole, 'business');
   assert.equal(current().demoStep, 0);
 });
+
+test('builder draft and field provenance survive save/reload without sharing caller objects', async () => {
+  const task = { ...createEmptyTask('Нужен прогноз спроса по магазинам.'), ...demoAnswers,
+    fieldSources: { availableData: 'clarification' as const },
+  };
+  current().addTask(task);
+  task.fieldSources.availableData = 'manual' as 'clarification';
+  const savedTask = current().tasks.find(item => item.id === task.id)!;
+  assert.equal(savedTask.fieldSources?.availableData, 'clarification');
+  assert.equal(savedTask.rawDraft, 'Нужен прогноз спроса по магазинам.');
+  assert.equal(savedTask.rating, 0);
+  await useAppStore.persist.rehydrate();
+  const restored = current().tasks.find(item => item.id === task.id)!;
+  assert.equal(restored.fieldSources?.availableData, 'clarification');
+  assert.equal(restored.rawDraft, savedTask.rawDraft);
+  current().confirmTask(task.id);
+  current().publishTask(task.id);
+  current().updateTask({ ...current().tasks.find(item => item.id === task.id)!, rawDraft: 'Уточнённый черновик для магазинов.' });
+  assert.equal(current().tasks.find(item => item.id === task.id)?.confirmed, false);
+  assert.equal(current().tasks.find(item => item.id === task.id)?.published, false);
+});
+
+test('legacy platform saves keep their original milestone and points while receiving new demo records', async () => {
+  const team = seedTeams.find(item => item.id === 'team-1')!;
+  const task = seedTasks.find(item => item.id === 'task-1')!;
+  const selected = seedProposals.find(item => item.id === 'prop-1')!;
+  const milestone = { id: 'legacy-work', taskId: task.id, teamId: team.id, title: 'Original MVP stage',
+    description: 'Accepted prototype', points: 50, status: 'completed', confirmedAt: new Date().toISOString() };
+  memory.set(STORAGE_KEY, JSON.stringify({ version: 0, state: {
+    tasks: [{ ...task, title: 'User-edited legacy task' }], teams: [{ ...team, progressPoints: team.progressPoints + 50 }],
+    proposals: [selected], milestones: [milestone], activeRole: 'business', activeTeamId: team.id, activeTaskId: task.id,
+  } }));
+  await useAppStore.persist.rehydrate();
+  assert.equal(current().tasks.length, seedTasks.length);
+  assert.equal(current().teams.length, seedTeams.length);
+  assert.equal(current().tasks.find(item => item.id === task.id)?.title, 'User-edited legacy task');
+  assert.equal(current().milestones.filter(item => item.taskId === task.id && item.teamId === team.id).length, 1);
+  assert.equal(current().teams.find(item => item.id === team.id)?.progressPoints, team.progressPoints + 50);
+  current().confirmMilestone(milestone.id);
+  assert.equal(current().teams.find(item => item.id === team.id)?.progressPoints, team.progressPoints + 50);
+  assert.equal(JSON.parse(memory.get(STORAGE_KEY)!).version, STORAGE_VERSION);
+});
+
+test('the UI branch storage key migrates once into the shared platform save', async () => {
+  current().setActiveRole('student');
+  current().setActiveTeam('team-datalab');
+  current().navigate('my-proposals');
+  const saved = JSON.parse(memory.get(STORAGE_KEY)!);
+  saved.version = 1;
+  memory.clear();
+  memory.set('ai-sana-demo', JSON.stringify(saved));
+  await useAppStore.persist.rehydrate();
+  assert.equal(current().activeTeamId, 'team-datalab');
+  assert.equal(current().page, 'my-proposals');
+  assert.equal(JSON.parse(memory.get(STORAGE_KEY)!).version, STORAGE_VERSION);
+  assert.equal(memory.get('ai-sana-demo'), JSON.stringify(saved), 'The original save remains available for recovery.');
+});
