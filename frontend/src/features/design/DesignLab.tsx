@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { savedDesign, type DesignTheme as Theme } from '../../app/appearance';
 import './DesignLab.css';
 
-type Theme = 'signal' | 'atelier' | 'index';
 type DesignLabProps = { onBack?: () => void; onApply?: (theme: Theme) => void };
 
 const concepts = [
@@ -45,7 +45,7 @@ function IndexPreview() {
 }
 
 export default function DesignLab({ onBack, onApply }: DesignLabProps) {
-  const [selected, setSelected] = useState<Theme>('signal');
+  const [selected, setSelected] = useState<Theme>(savedDesign);
   const [applied, setApplied] = useState<Theme | null>(null);
   const concept = concepts.find(item => item.id === selected)!;
   function apply() { setApplied(selected); onApply?.(selected); }

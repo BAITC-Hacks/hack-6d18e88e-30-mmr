@@ -74,23 +74,33 @@ export default function ProfilePanel({
   return <div className="sana-account" aria-busy={busy}>
     <section className="sana-account-hero" aria-labelledby="sana-account-name">
       <div className="sana-account-hero-art" aria-hidden="true"><i /><i /><i /></div>
-      <div className="sana-account-avatar-wrap">
-        <div className="sana-account-avatar" aria-hidden="true">{initials}</div>
-        {account.email_verified && <span className="sana-account-avatar-check" aria-hidden="true"><ProfileIcon name="check" /></span>}
+      <div className="sana-account-membership">
+        <span className="sana-account-membership-brand"><span aria-hidden="true"><i /><i /><i /><i /></span>AI SANA</span>
+        <span>Личный кабинет</span>
       </div>
-      <div className="sana-account-welcome">
-        <p className="sana-account-eyebrow">Ваше личное пространство</p>
-        <h1 id="sana-account-name">{name}</h1>
-        <p className="sana-account-intro">Всё важное — в одном месте. Настройте аккаунт под себя.</p>
-        <div className="sana-account-badges">
-          <span className="sana-account-role"><ProfileIcon name={role.icon} />{role.label}</span>
-          <span className={`sana-account-status ${account.email_verified ? 'sana-account-status--verified' : 'sana-account-status--pending'}`}>
-            <span aria-hidden="true" />{account.email_verified ? 'Почта подтверждена' : 'Подтвердите почту'}
-          </span>
+      <div className="sana-account-hero-body">
+        <div className="sana-account-avatar-wrap">
+          <div className="sana-account-avatar" aria-hidden="true">{initials}</div>
+          {account.email_verified && <span className="sana-account-avatar-check" aria-hidden="true"><ProfileIcon name="check" /></span>}
+        </div>
+        <div className="sana-account-welcome">
+          <p className="sana-account-eyebrow">Ваше личное пространство</p>
+          <h1 id="sana-account-name">{name}</h1>
+          <p className="sana-account-intro">Хорошие идеи начинаются с вас.</p>
+          <div className="sana-account-badges">
+            <span className="sana-account-role"><ProfileIcon name={role.icon} />{role.label}</span>
+            <span className={`sana-account-status ${account.email_verified ? 'sana-account-status--verified' : 'sana-account-status--pending'}`}>
+              <span aria-hidden="true" />{account.email_verified ? 'Почта подтверждена' : 'Подтвердите почту'}
+            </span>
+          </div>
         </div>
       </div>
     </section>
 
+    <div className="sana-account-section-heading">
+      <h2>Настройки профиля</h2>
+      <p>Ваши данные. Ваши предпочтения.</p>
+    </div>
     <div className="sana-account-grid">
       <section className="sana-account-card sana-account-details" aria-labelledby="sana-account-details-title">
         <div className="sana-account-card-heading">
@@ -114,7 +124,7 @@ export default function ProfilePanel({
           <span className="sana-account-icon-box"><ProfileIcon name="spark" /></span>
           <div><p className="sana-account-kicker">Только полезное</p><h2 id="sana-account-notifications-title">Письма от AI Sana</h2></div>
         </div>
-        <p className="sana-account-card-description">Вы решаете, что будет в вашей почте.</p>
+        <p className="sana-account-card-description">Оставайтесь в курсе того, что вам интересно.</p>
         <label className="sana-account-newsletter" htmlFor={preferencesId}>
           <span><strong>Новости платформы</strong><span id={`${preferencesId}-description`}>Обновления и новые возможности AI Sana.</span></span>
           <span className="sana-account-switch">
@@ -123,8 +133,8 @@ export default function ProfilePanel({
           </span>
         </label>
         <p className="sana-account-service-note">Письма для подтверждения почты и восстановления пароля приходят независимо от подписки.</p>
-        <div className="sana-account-save-area">
-          <p className="sana-account-save-state" aria-live="polite">{preferencesChanged ? 'Есть несохранённые изменения' : 'Настройки сохранены'}</p>
+        <div className={`sana-account-save-area${preferencesChanged ? ' sana-account-save-area--changed' : ''}`}>
+          <p className="sana-account-save-state" aria-live="polite"><span aria-hidden="true" />{preferencesChanged ? 'Есть несохранённые изменения' : 'Настройки сохранены'}</p>
           <button className="sana-account-button sana-account-button--primary" type="button" disabled={busy || !preferencesChanged} onClick={onSavePreferences}>Сохранить настройки<ProfileIcon name="check" /></button>
         </div>
       </section>

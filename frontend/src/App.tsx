@@ -1,19 +1,14 @@
-﻿import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { useAppStore } from './app/store';
+import { DESIGN_STORAGE_KEY, savedDesign, type DesignTheme } from './app/appearance';
+import AppearanceSwitcher from './components/AppearanceSwitcher';
 import AuthPage from './features/auth/AuthPage';
 import PlatformWorkspace from './PlatformWorkspace';
 import type { Account } from './types/auth';
+import './styles/accountThemes.css';
 
 const DesignLab = lazy(() => import('./features/design/DesignLab'));
-type DesignTheme = 'signal' | 'atelier' | 'index';
 type View = 'account' | 'workspace' | 'design';
-function savedDesign(): DesignTheme {
-  try {
-    const value = window.localStorage.getItem('ai-sana-design');
-    if (value === 'atelier' || value === 'index') return value;
-  } catch { /* Theme selection remains usable without persistent storage. */ }
-  return 'signal';
-}
 function hasAuthCallback() {
   const url = new URL(window.location.href);
   const hash = new URLSearchParams(url.hash.slice(1));
@@ -32,7 +27,18 @@ function Application() {
   const [accountEntry, setAccountEntry] = useState(0);
   const [theme, setTheme] = useState<DesignTheme>(savedDesign);
 
-  useEffect(() => { document.documentElement.dataset.design = theme; }, [theme]);
+  useLayoutEffect(() => { document.documentElement.dataset.design = theme; }, [theme]);
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== DESIGN_STORAGE_KEY && event.key !== null) return;
+      try {
+        if (event.storageArea !== window.localStorage) return;
+        setTheme(savedDesign());
+      } catch { /* Keep this tab's choice when storage is unavailable. */ }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
   useEffect(() => {
     const onLocationChange = (event: Event) => {
       // Anchor links for keyboard navigation do not restart auth initialization.
@@ -69,15 +75,18 @@ function Application() {
     setAccount(current);
     navigate('workspace');
   }
-  function applyDesign(design: DesignTheme) {
+  function changeDesign(design: DesignTheme) {
     setTheme(design);
-    try { window.localStorage.setItem('ai-sana-design', design); } catch { /* Apply to this tab anyway. */ }
+    try { window.localStorage.setItem(DESIGN_STORAGE_KEY, design); } catch { /* Apply to this tab anyway. */ }
+  }
+  function applyDesign(design: DesignTheme) {
+    changeDesign(design);
     navigate('workspace');
   }
 
   if (view === 'design') return <Suspense fallback={<main className="sana-app-error" role="status">Открываем дизайн-системы…</main>}><DesignLab onBack={() => navigate('workspace')} onApply={applyDesign} /></Suspense>;
   if (view === 'workspace') return <PlatformWorkspace account={account} onAccount={() => navigate('account')} onDesign={() => navigate('design')} />;
-  return <AuthPage key={accountEntry} onDemo={() => openWorkspace(null)} onWorkspace={openWorkspace} />;
+  return <AuthPage key={accountEntry} onDemo={() => openWorkspace(null)} onWorkspace={openWorkspace} appearanceControls={<AppearanceSwitcher value={theme} onChange={changeDesign} />} />;
 }
 
 class AppBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {

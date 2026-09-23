@@ -1,0 +1,57 @@
+/* Account surfaces follow the same persisted theme as the workspace. */
+.sana-auth {
+  color-scheme: dark;
+  --auth-bg: #10150f;
+  --auth-surface: rgb(28 35 25 / .72);
+  --auth-surface-raised: rgb(39 48 33 / .82);
+  --auth-solid: #1c2319;
+  --auth-ink: #f4f5e9;
+  --auth-muted: #b7c0aa;
+  --auth-subtle: #8f9e82;
+  --auth-accent: #d4ed62;
+  --auth-accent-alt: #b8dfb0;
+  --auth-on-accent: #20251f;
+  --auth-glow: 212 237 98;
+  --auth-border: rgb(220 235 196 / .16);
+  --auth-hairline: rgb(234 244 215 / .07);
+  --auth-shadow: #050b0666;
+  --auth-font-body: 'Manrope', Arial, sans-serif;
+  --auth-font-display: 'Unbounded', 'Manrope', Arial, sans-serif;
+  --auth-radius: 26px;
+}
+:root[data-design='atelier'] .sana-auth {
+  --auth-bg: #1c1512;
+  --auth-surface: rgb(48 35 29 / .74);
+  --auth-surface-raised: rgb(63 44 35 / .85);
+  --auth-solid: #30231d;
+  --auth-ink: #fff3e6;
+  --auth-muted: #d0b9a8;
+  --auth-subtle: #b19b8d;
+  --auth-accent: #f4aa8c;
+  --auth-accent-alt: #edcb91;
+  --auth-on-accent: #382016;
+  --auth-glow: 244 170 140;
+  --auth-border: rgb(244 206 179 / .18);
+  --auth-hairline: rgb(255 222 198 / .07);
+  --auth-shadow: #0f060666;
+  --auth-font-display: Georgia, 'Times New Roman', serif;
+  --auth-radius: 20px;
+}
+:root[data-design='index'] .sana-auth {
+  --auth-bg: #0d1423;
+  --auth-surface: rgb(24 36 60 / .75);
+  --auth-surface-raised: rgb(32 48 78 / .84);
+  --auth-solid: #18243c;
+  --auth-ink: #f0f4ff;
+  --auth-muted: #b5c4dd;
+  --auth-subtle: #96a9c9;
+  --auth-accent: #9abaff;
+  --auth-accent-alt: #a3d6f5;
+  --auth-on-accent: #132348;
+  --auth-glow: 154 186 255;
+  --auth-border: rgb(179 203 250 / .19);
+  --auth-hairline: rgb(202 219 255 / .07);
+  --auth-shadow: #05091766;
+  --auth-font-display: 'Manrope', Arial, sans-serif;
+  --auth-radius: 14px;
+}

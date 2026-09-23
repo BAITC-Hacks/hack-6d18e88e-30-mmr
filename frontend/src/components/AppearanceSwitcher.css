@@ -1,0 +1,60 @@
+.sana-appearance {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  max-width: 100%;
+  border: 1px solid var(--auth-border);
+  border-radius: 14px;
+  background: var(--auth-surface);
+  box-shadow: inset 0 1px 0 var(--auth-hairline), 0 8px 24px #00000012;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.sana-appearance .sana-appearance-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--auth-muted);
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.sana-appearance .sana-appearance-choice:hover { color: var(--auth-ink); background: var(--auth-hairline); }
+.sana-appearance .sana-appearance-choice[aria-pressed='true'] {
+  color: var(--auth-accent);
+  background: rgb(var(--auth-glow) / .09);
+  border-color: rgb(var(--auth-glow) / .22);
+  box-shadow: inset 0 1px 0 rgb(var(--auth-glow) / .1), 0 0 22px rgb(var(--auth-glow) / .05);
+}
+.sana-appearance-swatch { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: var(--swatch); }
+.sana-appearance-choice--signal { --swatch: #d4ed62; }
+.sana-appearance-choice--atelier { --swatch: #f4aa8c; }
+.sana-appearance-choice--index { --swatch: #9abaff; }
+.sana-appearance-check { width: 13px; height: 13px; opacity: 0; }
+.sana-appearance-choice[aria-pressed='true'] .sana-appearance-check { opacity: 1; }
+@media (max-width: 480px) {
+  .sana-appearance { width: 100%; }
+  .sana-appearance .sana-appearance-choice { flex: 1; gap: 5px; min-height: 38px; padding-inline: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sana-appearance .sana-appearance-choice { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .sana-appearance { background: var(--auth-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sana-appearance { background: var(--auth-solid); }
+}
+@media (forced-colors: active) {
+  .sana-appearance .sana-appearance-choice[aria-pressed='true'] { border-color: Highlight; }
+  .sana-appearance-swatch { display: none; }
+}

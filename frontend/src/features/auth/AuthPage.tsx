@@ -51,12 +51,12 @@ function StoryPanel() {
   return <aside className="sana-story" aria-label="О платформе AI Sana">
     <Brand />
     <div className="sana-story-main">
-      <p className="sana-eyebrow"><span /> ИДЕИ ВСТРЕЧАЮТ КОМАНДЫ</p>
-      <h1>Большие идеи.<br />Настоящие<br /><em>возможности.</em></h1>
+      <p className="sana-eyebrow"><span /> БИЗНЕС × КОМАНДЫ</p>
+      <h1>Идея сегодня.<br /><em>Проект завтра.</em></h1>
       <p className="sana-story-copy">Бизнес ставит задачи. Студенты создают решения.<br />Ваш следующий проект начинается здесь.</p>
       <div className="sana-journey" aria-hidden="true">
         <div className="sana-journey-grid" />
-        <div className="sana-glass-orb"><span /><span /><span /></div>
+        <div className="sana-glass-orb"><span /><span /><span /><i className="sana-orb-core"><Icon name="arrow" /></i></div>
         <svg className="sana-journey-path" viewBox="0 0 480 290" fill="none"><path d="M34 185C99 250 168 8 279 77S350 264 441 151" stroke="currentColor" strokeWidth="1" strokeDasharray="3 7" /><circle cx="34" cy="185" r="4" fill="currentColor" /><circle cx="441" cy="151" r="4" fill="currentColor" /></svg>
         <div className="sana-orbit sana-orbit--one" /><div className="sana-orbit sana-orbit--two" />
         <div className="sana-idea-card">
@@ -89,7 +89,7 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Не удалось выполнить действие. Попробуйте ещё раз.';
 }
 
-export default function AuthPage({ onDemo, onWorkspace }: { onDemo?: () => void; onWorkspace?: (account: Account) => void }) {
+export default function AuthPage({ onDemo, onWorkspace, appearanceControls }: { onDemo?: () => void; onWorkspace?: (account: Account) => void; appearanceControls?: ReactNode }) {
   const [mode, setMode] = useState<Mode>('login');
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
@@ -246,7 +246,10 @@ export default function AuthPage({ onDemo, onWorkspace }: { onDemo?: () => void;
       <header className="sana-topbar">
         <div className="sana-mobile-brand"><Brand compact /></div>
         <span className="sana-topbar-label"><span /> ПРАКТИКА СО СМЫСЛОМ</span>
-        {onDemo && <button type="button" className="sana-text-button sana-demo-button" onClick={onDemo} disabled={busy}>Открыть демо <span aria-hidden="true">↗</span></button>}
+        <div className="sana-topbar-actions">
+          {appearanceControls && <div className="sana-appearance-controls">{appearanceControls}</div>}
+          {onDemo && <button type="button" className="sana-text-button sana-demo-button" onClick={onDemo} disabled={busy}>Открыть демо <span aria-hidden="true">↗</span></button>}
+        </div>
       </header>
       <main className={`sana-main ${mode === 'register' ? 'sana-main--register' : ''}`} id="sana-main" tabIndex={-1}>
         {loading ? <div className="sana-loading" role="status"><span className="sana-spinner" /><p>Готовим ваш аккаунт…</p></div> : <div className="sana-form-container" aria-busy={busy}>
